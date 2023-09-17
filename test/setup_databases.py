@@ -9,8 +9,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 conn_str_list = [
-    'postgresql://postgres:postgres@db_pg:5432/postgres',
-    'mysql+pymysql://user:password@db_mysql:3306/db'
+    'postgresql://postgres:postgres@localhost:5432/postgres',
+    'mysql+pymysql://user:password@localhost:3306/db'
 ]
 
 if __name__ == '__main__':
