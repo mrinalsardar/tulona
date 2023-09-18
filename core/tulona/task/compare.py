@@ -140,7 +140,7 @@ class CompareTask(BaseTask):
             ', '.join(df1_extra_cols),
             ', '.join(df2_extra_cols),
         ]
-        df_meta = pd.DataFrame(data=metadata, columns=RESULT_META_COLS)
+        df_meta = pd.DataFrame(data=[metadata], columns=RESULT_META_COLS)
 
         return df_mismatch, df_meta
 
@@ -191,8 +191,8 @@ class CompareTask(BaseTask):
         return df_mismatch, df_meta
 
 
-    def prepare_table_list(self, config, level):
-        table_combo_list = [] # TODO: consider using generator as this list can be long
+    def prepare_table_list(self, config, level, table_combo_list=[]):
+        # TODO: consider using generator for table_combo_list as this list can be long
         all_profiles = self.project["connection_profiles"]
 
         log.debug(f"Preparing for {level=}")
@@ -253,7 +253,7 @@ class CompareTask(BaseTask):
                     for s in common_schemas
                 ]
 
-                self.prepare_table_list(config=schema_level_config, level="schema")
+                self.prepare_table_list(config=schema_level_config, level="schema", table_combo_list=table_combo_list)
 
         elif level.lower() == "schema":
             for combo in config:
@@ -309,7 +309,7 @@ class CompareTask(BaseTask):
                     for t in common_tables
                 ]
 
-                self.prepare_table_list(config=table_level_config, level="table")
+                self.prepare_table_list(config=table_level_config, level="table", table_combo_list=table_combo_list)
 
         elif level.lower() == "table":
             for combo in config:
@@ -328,7 +328,7 @@ class CompareTask(BaseTask):
                             "port": profile1["port"],
                             "username": profile1["username"],
                             "password": profile1["password"],
-                            "database": profile1["database"],
+                            "database": combo["database1"],
                         },
                         "database2": combo["database2"],
                         "schema2": combo["schema2"],
@@ -339,10 +339,11 @@ class CompareTask(BaseTask):
                             "port": profile2["port"],
                             "username": profile2["username"],
                             "password": profile2["password"],
-                            "database": profile2["database"],
+                            "database": combo["database2"],
                         },
                     }
                 )
+
         else:
             raise TulonaUnSupportedExecEngine(
                 f"Level {level} not supported"
@@ -378,9 +379,10 @@ class CompareTask(BaseTask):
                 conn1 = self.get_connection(**table_combo["profile1"])
                 conn2 = self.get_connection(**table_combo["profile2"])
 
-                df_meta, df_mismatch = self.compare_tables(
-                    connection1=conn1,
-                    connection2=conn2,
+                df_mismatch, df_meta = self.compare_tables(
+                    # connection1=conn1, # TODO: change this to individual conns
+                    # connection2=conn2,
+                    connections=[conn1, conn2],
                     schema1=table_combo["schema1"],
                     schema2=table_combo["schema2"],
                     tab1=table_combo["table1"],
