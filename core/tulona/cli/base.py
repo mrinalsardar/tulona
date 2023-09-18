@@ -37,21 +37,22 @@ def connect(ctx):
 # command: tulona compare
 @cli.command("compare")
 @click.pass_context
+@p.level
 @p.exec_engine
-@p.ignore_schema
 @p.outdir
 def compare(ctx, **kwargs):
     """Compares two data entities"""
 
     proj = Project()
-    proj.load_project_config()
 
     ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.project_config_raw
-    ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
+    # ctx.obj = prof.profiles_raw # TODO: implement
+    ctx.obj["project"] = proj.load_project_config()
+    # TODO: Need to think more about having guardrails for eligibility. Do we need it?
+    # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    task = CompareTask(ctx.obj["eligible_conn_profiles"], ctx.obj["runtime"])
+    task = CompareTask(ctx.obj["project"], ctx.obj["runtime"])
     task.execute()
 
 

@@ -3,8 +3,8 @@ from typing import Any, Dict
 
 
 RUNTIME_DEFAULTS = {
+    "LEVEL": "database",
     "ENGINE": "pandas",
-    "IGNORE_SCHEMA": True,
     "OUTDIR": "output",
 }
 
@@ -19,6 +19,6 @@ class RunConfig:
                 project.get(key, RUNTIME_DEFAULTS[key.upper()])
             )
 
-        self.engine=get_final_value("engine")
-        self.ignore_schema=get_final_value("ignore_schema")
-        self.outdir=get_final_value("outdir")
+        self.level = get_final_value("level")
+        self.engine = get_final_value("engine")
+        self.outdir = get_final_value("outdir")
