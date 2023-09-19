@@ -8,7 +8,7 @@ from tulona.config.runtime import RunConfig
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.DEBUG, # TODO: Set level to INFO once verbosity is fixed
     format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 )
 
@@ -40,8 +40,17 @@ def connect(ctx):
 @p.level
 @p.exec_engine
 @p.outdir
+@p.verbose
 def compare(ctx, **kwargs):
     """Compares two data entities"""
+
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+        )
 
     proj = Project()
 

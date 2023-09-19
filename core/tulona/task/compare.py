@@ -462,3 +462,7 @@ class CompareTask(BaseTask):
             df_result_meta.to_csv(metadiff_file, header=True, index=False)
         else:
             log.warn("Nothing to compare")
+
+        log.info(
+            f"Comparison complete. Please look at the '{self.runtime.outdir}' folder for results"
+        )

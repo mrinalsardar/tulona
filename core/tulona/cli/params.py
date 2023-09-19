@@ -13,14 +13,15 @@ exec_engine = click.option(
     type=click.STRING
 )
 
-# ignore_schema = click.option(
-#     "--ignore-schema",
-#     help="Compare all available tables in the database. Works only with '--level' database",
-#     type=click.BOOL
-# )
-
 outdir = click.option(
     "--outdir",
     help="Where do you want me to write the result of the comparison and other related metadata?",
     type=click.STRING
+)
+
+verbose = click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Show debug level logs"
 )
