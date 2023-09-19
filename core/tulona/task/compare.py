@@ -1,5 +1,5 @@
 import logging
-import dask.dataframe as ddf
+import dask.dataframe as dd
 from dataclasses import dataclass
 import pandas as pd
 from pathlib import Path
@@ -8,15 +8,14 @@ from tulona.adapter.connection import ConnectionManager
 from tulona.util.database import (
     get_schemas_from_db,
     get_table_primary_keys,
-    get_tables_from_schema,
-    get_tables_from_db
+    get_tables_from_schema
 )
 from tulona.exceptions import (
     TulonaUnSupportedExecEngine
 )
 from tulona.util.filesystem import get_result_dir
 from tulona.config.runtime import RunConfig
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
 
 log = logging.getLogger(__name__)
@@ -64,7 +63,7 @@ class CompareTask(BaseTask):
             username: str,
             password: str,
             database: str
-        ) -> list:
+        ) -> ConnectionManager:
 
         conman = ConnectionManager(
             dbtype=dbtype,
@@ -93,12 +92,20 @@ class CompareTask(BaseTask):
         return df
 
 
-    def compare_tables_pandas(self, connections, schema1, schema2, tab1, tab2=None, primary_key=[]):
-        tab2 = tab2 if tab2 else tab1
+    def compare_tables_pandas(
+            self,
+            connection1: ConnectionManager,
+            connection2: ConnectionManager,
+            schema1: str,
+            schema2: str,
+            tab1: str,
+            tab2: str,
+            primary_key: list=[]
+        ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         tulona_id_col = "tulona_row_id"
 
-        df1 = pd.read_sql_table(table_name=tab1, con=connections[0].conn)
-        df2 = pd.read_sql_table(table_name=tab2, con=connections[1].conn)
+        df1 = pd.read_sql_table(table_name=tab1, con=connection1.conn)
+        df2 = pd.read_sql_table(table_name=tab2, con=connection2.conn)
 
         # ---------> Level 1: match the hashes of whole row
         df1 = self.prepare_rows_pandas(df1, tulona_id_col=tulona_id_col)
@@ -109,12 +116,12 @@ class CompareTask(BaseTask):
             right=df2,
             on=tulona_id_col,
             how="outer",
-            suffixes=(f'_{connections[0].database}', f'_{connections[1].database}'),
+            suffixes=(f"_{connection1.database}", f"_{connection2.database}"),
             indicator=True
         )
 
         # mismtaches
-        df_mismatch = df_merge[df_merge['_merge'] != 'both'].drop(tulona_id_col, axis=1)
+        df_mismatch = df_merge[df_merge["_merge"] != "both"].drop(tulona_id_col, axis=1)
 
         # ---------> Level 2+: TODO
 
@@ -126,37 +133,53 @@ class CompareTask(BaseTask):
 
 
         metadata = [
-            connections[0].database,
-            connections[1].database,
+            connection1.database,
+            connection2.database,
             schema1,
             schema2,
             tab1,
             tab2,
             df1.shape[0],
             df2.shape[0],
-            df_merge[df_merge['_merge'] == 'both'].shape[0],
-            df_merge[df_merge['_merge'] == 'left_only'].shape[0],
-            df_merge[df_merge['_merge'] == 'right_only'].shape[0],
-            ', '.join(df1_extra_cols),
-            ', '.join(df2_extra_cols),
+            df_merge[df_merge["_merge"] == "both"].shape[0],
+            df_merge[df_merge["_merge"] == "left_only"].shape[0],
+            df_merge[df_merge["_merge"] == "right_only"].shape[0],
+            ", ".join(df1_extra_cols),
+            ", ".join(df2_extra_cols),
         ]
         df_meta = pd.DataFrame(data=[metadata], columns=RESULT_META_COLS)
 
         return df_mismatch, df_meta
 
 
-    def compare_tables_dask(self, connections, tab1, tab2):
-        df1 = ddf.read_sql_table(table_name=tab1, con=connections[0].conn)
-        df2 = ddf.read_sql_table(table_name=tab2, con=connections[1].conn)
+    def compare_tables_dask(
+            self,
+            connection1: ConnectionManager,
+            connection2: ConnectionManager,
+            schema1: str,
+            schema2: str,
+            tab1: str,
+            tab2: str,
+            primary_key: list=[]
+        ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+            # TODO: Implement
 
-        # TODO
+            return pd.DataFrame(), pd.DataFrame()
 
 
-    def compare_tables(self, connections, schema1: str, schema2: str, tab1: str, tab2: str=None):
+    def compare_tables(
+            self,
+            connection1: ConnectionManager,
+            connection2: ConnectionManager,
+            schema1: str,
+            schema2: str,
+            tab1: str,
+            tab2: str
+        ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         tab2 = tab2 if tab2 else tab1
 
-        tab1_pk = get_table_primary_keys(engine=connections[0].engine, table=tab1)
-        tab2_pk = get_table_primary_keys(engine=connections[1].engine, table=tab2)
+        tab1_pk = get_table_primary_keys(engine=connection1.engine, table=tab1)
+        tab2_pk = get_table_primary_keys(engine=connection2.engine, table=tab2)
 
         primary_key_available = len(tab1_pk) > 0 and len(tab2_pk) > 0 and tab1_pk == tab2_pk
 
@@ -167,7 +190,8 @@ class CompareTask(BaseTask):
 
         if self.runtime.engine.lower() == 'pandas':
             df_mismatch, df_meta = self.compare_tables_pandas(
-                connections=connections,
+                connection1=connection1,
+                connection2=connection2,
                 schema1=schema1,
                 schema2=schema2,
                 primary_key=tab1_pk if primary_key_available else [],
@@ -176,7 +200,8 @@ class CompareTask(BaseTask):
             )
         elif self.runtime.engine.lower() == 'dask':
             df_mismatch, df_meta = self.compare_tables_dask(
-                connections=connections,
+                connection1=connection1,
+                connection2=connection2,
                 schema1=schema1,
                 schema2=schema2,
                 primary_key=tab1_pk if primary_key_available else [],
@@ -191,7 +216,12 @@ class CompareTask(BaseTask):
         return df_mismatch, df_meta
 
 
-    def prepare_table_list(self, config, level, table_combo_list=[]):
+    def prepare_table_list(
+            self,
+            config: list[Dict],
+            level: str,
+            table_combo_list: list=[]
+        ) -> list[Dict]:
         # TODO: consider using generator for table_combo_list as this list can be long
         all_profiles = self.project["connection_profiles"]
 
@@ -253,7 +283,11 @@ class CompareTask(BaseTask):
                     for s in common_schemas
                 ]
 
-                self.prepare_table_list(config=schema_level_config, level="schema", table_combo_list=table_combo_list)
+                self.prepare_table_list(
+                    config=schema_level_config,
+                    level="schema",
+                    table_combo_list=table_combo_list
+                )
 
         elif level.lower() == "schema":
             for combo in config:
@@ -309,7 +343,11 @@ class CompareTask(BaseTask):
                     for t in common_tables
                 ]
 
-                self.prepare_table_list(config=table_level_config, level="table", table_combo_list=table_combo_list)
+                self.prepare_table_list(
+                    config=table_level_config,
+                    level="table",
+                    table_combo_list=table_combo_list
+                )
 
         elif level.lower() == "table":
             for combo in config:
@@ -380,9 +418,8 @@ class CompareTask(BaseTask):
                 conn2 = self.get_connection(**table_combo["profile2"])
 
                 df_mismatch, df_meta = self.compare_tables(
-                    # connection1=conn1, # TODO: change this to individual conns
-                    # connection2=conn2,
-                    connections=[conn1, conn2],
+                    connection1=conn1,
+                    connection2=conn2,
                     schema1=table_combo["schema1"],
                     schema2=table_combo["schema2"],
                     tab1=table_combo["table1"],
@@ -399,10 +436,14 @@ class CompareTask(BaseTask):
                         f"{table_combo['schema1']}__{table_combo['schema2']}"
                     )
                     diffpath.mkdir(parents=True, exist_ok=True)
-                    diffcsv = Path(diffpath, f"{table_combo['table1']}__{table_combo['table2']}.csv")
+                    diffcsv = Path(
+                        diffpath,
+                        f"{table_combo['table1']}__{table_combo['table2']}.csv"
+                    )
 
                     log.debug(
-                        f"Writing {table_combo['table1']} vs {table_combo['table2']} diff into: {diffcsv}"
+                        f"Writing {table_combo['table1']} vs {table_combo['table2']} diff"
+                        + f" into: {diffcsv}"
                     )
                     df_mismatch.to_csv(diffcsv, header=True, index=False)
 
