@@ -2,6 +2,7 @@ import click
 import logging
 from tulona.task.compare import CompareTask
 from tulona.cli import params as p
+from tulona.config.profile import Profile
 from tulona.config.porject import Project
 from tulona.config.runtime import RunConfig
 
@@ -23,15 +24,15 @@ def cli(ctx):
     """Tulona compares databases to find out differences"""
 
 
-# command: tulona connect
-@cli.command("connect")
-@click.pass_context
-def connect(ctx):
-    """
-    WIP - Tests the connection to all the database tools using
-    the connection profiles from 'tulona_project.yml'
-    """
-    click.echo("Testing connections...")
+# # command: tulona connect
+# @cli.command("connect")
+# @click.pass_context
+# def connect(ctx):
+#     """
+#     WIP - Tests the connection to all the database tools using
+#     the connection profiles from 'tulona_project.yml'
+#     """
+#     click.echo("Testing connections...")
 
 
 # command: tulona compare
@@ -52,16 +53,17 @@ def compare(ctx, **kwargs):
             format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
         )
 
+    prof = Profile()
     proj = Project()
 
     ctx.obj = ctx.obj or {}
-    # ctx.obj = prof.profiles_raw # TODO: implement
+    ctx.obj["profile"] = prof.load_profile_config()
     ctx.obj["project"] = proj.load_project_config()
     # TODO: Need to think more about having guardrails for eligibility. Do we need it?
     # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    task = CompareTask(ctx.obj["project"], ctx.obj["runtime"])
+    task = CompareTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"])
     task.execute()
 
 

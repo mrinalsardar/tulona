@@ -12,7 +12,7 @@ from tulona.exceptions import (
 
 log = logging.getLogger(__name__)
 
-PROJECT_FILE_NAME = 'tulona_project.yml'
+PROJECT_FILE_NAME = 'tulona-project.yml'
 
 
 class Project:

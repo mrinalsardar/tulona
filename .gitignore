@@ -1,6 +1,6 @@
 __pycache__
-tulona_project.yml
-tulona_project.yaml
+tulona-project.yml
+tulona-project.yaml
 **/*.egg*
 .DS_Store
 .vscode

@@ -52,6 +52,7 @@ RESULT_META_COLS = [
 
 @dataclass
 class CompareTask(BaseTask):
+    profile: Dict
     project: Dict
     runtime: RunConfig
 
@@ -223,7 +224,7 @@ class CompareTask(BaseTask):
             table_combo_list: list=[]
         ) -> list[Dict]:
         # TODO: consider using generator for table_combo_list as this list can be long
-        all_profiles = self.project["connection_profiles"]
+        all_profiles = self.profile["profiles"]
 
         log.debug(f"Preparing for {level=}")
         if level.lower() == "database":

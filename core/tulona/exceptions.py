@@ -22,3 +22,15 @@ class TulonaUnSupportedExecEngine(Exception):
         self.message = message
         self.formatted_message = f"ERROR: {self.message}"
         super().__init__(self.formatted_message)
+
+class TulonaProfileException(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        self.formatted_message = f"ERROR: {self.message}"
+        super().__init__(self.formatted_message)
+
+class TulonaInvalidProfileConfigError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        self.formatted_message = f"ERROR: {self.message}"
+        super().__init__(self.formatted_message)
