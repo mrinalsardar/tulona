@@ -414,7 +414,11 @@ class CompareTask(BaseTask):
         if len(table_combo_list) > 0:
             meta_df_list = []
             for table_combo in table_combo_list:
-                log.debug(f"Comparing: {table_combo=}")
+                log.debug(
+                    "Comparing: %s vs %s", 
+                    "profile1-> " + ".".join([table_combo["database1"], table_combo["schema1"], table_combo["table1"]]),
+                    "profile2-> " + ".".join([table_combo["database2"], table_combo["schema2"], table_combo["table2"]])
+                )
                 conn1 = self.get_connection(**table_combo["profile1"])
                 conn2 = self.get_connection(**table_combo["profile2"])
 
