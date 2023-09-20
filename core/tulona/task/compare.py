@@ -40,6 +40,7 @@ RESULT_META_COLS = [
     'schema2_name',
     'db1_table_name',
     'db2_table_name',
+    'compared_on'
     'db1_rowcount',
     'db2_rowcount',
     'matched_rowcount',
@@ -78,18 +79,18 @@ class CompareTask(BaseTask):
 
         return conman
 
-    def prepare_rows_pandas(self, df: pd.DataFrame, tulona_id_col: str) -> pd.DataFrame:
+    def prepare_rows_pandas(self, df: pd.DataFrame, row_hash_col: str) -> pd.DataFrame:
         # return pd.DataFrame(pd.util.hash_pandas_object(obj=df, index=False))
 
         # TODO: handle timestamp columns - convert them to a standard format
-        # df[tulona_id_col] = pd.Series(df.fillna('').values.tolist()).str.join('|||')
+        # df[row_hash_col] = pd.Series(df.fillna('').values.tolist()).str.join('|||')
         df = pd.DataFrame(
             data=pd.Series(
                 df.fillna('').values.tolist()).map(lambda x: '|||'.join(map(str,x))
             ),
-            columns=['concatenated_record']
+            columns=['concat_value']
         )
-        df[tulona_id_col] = pd.util.hash_pandas_object(obj=df, index=False)
+        df[row_hash_col] = pd.util.hash_pandas_object(obj=df, index=False)
         return df
 
 
@@ -101,28 +102,45 @@ class CompareTask(BaseTask):
             schema2: str,
             tab1: str,
             tab2: str,
-            primary_key: list=[]
+            primary_key: Union[str, list]=None
         ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        tulona_id_col = "tulona_row_id"
+        row_hash_col = "row_hash"
+        primary_key = list(primary_key) if primary_key else None
 
         df1 = pd.read_sql_table(table_name=tab1, con=connection1.conn)
         df2 = pd.read_sql_table(table_name=tab2, con=connection2.conn)
 
         # ---------> Level 1: match the hashes of whole row
-        df1 = self.prepare_rows_pandas(df1, tulona_id_col=tulona_id_col)
-        df2 = self.prepare_rows_pandas(df2, tulona_id_col=tulona_id_col)
+        if primary_key: # TODO: Need to test this
+            df1 = pd.concat(
+                [
+                    df1[primary_key], 
+                    self.prepare_rows_pandas(df1, row_hash_col=row_hash_col)
+                ],
+                axis=1
+            )
+            df2 = pd.concat(
+                [
+                    df2[primary_key], 
+                    self.prepare_rows_pandas(df2, row_hash_col=row_hash_col)
+                ],
+                axis=1
+            )
+        else:
+            df1 = self.prepare_rows_pandas(df1, row_hash_col=row_hash_col)
+            df2 = self.prepare_rows_pandas(df2, row_hash_col=row_hash_col)
 
         df_merge = pd.merge(
             left=df1,
             right=df2,
-            on=tulona_id_col,
+            on=primary_key if primary_key else row_hash_col,
             how="outer",
             suffixes=(f"_{connection1.database}", f"_{connection2.database}"),
             indicator=True
         )
 
         # mismtaches
-        df_mismatch = df_merge[df_merge["_merge"] != "both"].drop(tulona_id_col, axis=1)
+        df_mismatch = df_merge[df_merge["_merge"] != "both"].drop(row_hash_col, axis=1)
 
         # ---------> Level 2+: TODO
 
@@ -140,6 +158,7 @@ class CompareTask(BaseTask):
             schema2,
             tab1,
             tab2,
+            primary_key if primary_key else row_hash_col,
             df1.shape[0],
             df2.shape[0],
             df_merge[df_merge["_merge"] == "both"].shape[0],
