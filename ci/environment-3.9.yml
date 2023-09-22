@@ -1,0 +1,8 @@
+name: tulona-3.9
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - coverage
+  - pytest
+  - python=3.9.*
