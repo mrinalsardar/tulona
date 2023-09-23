@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Needed by codecov.io
 
@@ -42,7 +42,7 @@ jobs:
           use-mamba: true
           channel-priority: strict
           python-version: ${{ matrix.python-version }}
-          environment-file: ci/environment-${{ matrix.python-version }}.yaml
+          environment-file: ci/environment-${{ matrix.python-version }}.yml
           activate-environment: test-environment
           auto-activate-base: false
 
@@ -55,4 +55,4 @@ jobs:
         run: source ci/scripts/run_tests.sh
 
       - name: Coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
