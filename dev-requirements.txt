@@ -13,3 +13,4 @@ flake8
 coverage
 black
 isort
+pytest-cov

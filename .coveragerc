@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = dask_scipy
+source = tulona
 
 [report]
 exclude_lines =
