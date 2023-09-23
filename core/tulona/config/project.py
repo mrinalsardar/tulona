@@ -36,9 +36,7 @@ class Project:
         log.debug(f"Attempting to load project config from {project_file_uri}")
 
         if not path_exists(project_file_uri):
-            raise TulonaProjectException(
-                f"Project file {project_file_uri} does not exist."
-            )
+            raise TulonaProjectException(f"Project file {project_file_uri} does not exist.")
 
         project_dict_raw = read_yaml(project_file_uri)
 

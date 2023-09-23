@@ -26,7 +26,7 @@ class ConnectionManager(BaseConnectionManager):
 
     def get_engine(self):
         self.engine = create_engine(
-            self.connection_string(), 
+            self.connection_string(),
             echo=False
         )  # TODO: remove echo_pool="debug" param
 

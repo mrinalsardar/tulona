@@ -82,9 +82,7 @@ class CompareTask(BaseTask):
         # TODO: handle timestamp columns - convert them to a standard format
         # df[row_hash_col] = pd.Series(df.fillna('').values.tolist()).str.join('|||')
         df = pd.DataFrame(
-            data=pd.Series(df.fillna("").values.tolist()).map(
-                lambda x: "|||".join(map(str, x))
-            ),
+            data=pd.Series(df.fillna("").values.tolist()).map(lambda x: "|||".join(map(str, x))),
             columns=["concat_value"],
         )
         df[row_hash_col] = pd.util.hash_pandas_object(obj=df, index=False)
@@ -193,9 +191,7 @@ class CompareTask(BaseTask):
         tab1_pk = get_table_primary_keys(engine=connection1.engine, table=tab1)
         tab2_pk = get_table_primary_keys(engine=connection2.engine, table=tab2)
 
-        primary_key_available = (
-            len(tab1_pk) > 0 and len(tab2_pk) > 0 and tab1_pk == tab2_pk
-        )
+        primary_key_available = len(tab1_pk) > 0 and len(tab2_pk) > 0 and tab1_pk == tab2_pk
 
         if primary_key_available:
             log.debug(f"Primary key available for table: {tab1}")
@@ -412,7 +408,7 @@ class CompareTask(BaseTask):
         self.results_dir = get_result_dir(
             dir_dict=RESTULT_LOCATIONS,
             base=self.runtime.outdir,
-            key='result_dir'
+            key="result_dir",
         )
 
         table_combo_list = self.prepare_table_list(
@@ -425,8 +421,14 @@ class CompareTask(BaseTask):
             for table_combo in table_combo_list:
                 log.debug(
                     "Comparing: %s vs %s",
-                    "profile1-> " + ".".join([table_combo["database1"], table_combo["schema1"], table_combo["table1"]]),
-                    "profile2-> " + ".".join([table_combo["database2"], table_combo["schema2"], table_combo["table2"]])
+                    "profile1-> "
+                    + ".".join(
+                        [table_combo["database1"], table_combo["schema1"], table_combo["table1"]]
+                    ),
+                    "profile2-> "
+                    + ".".join(
+                        [table_combo["database2"], table_combo["schema2"], table_combo["table2"]]
+                    ),
                 )
                 conn1 = self.get_connection(**table_combo["profile1"])
                 conn2 = self.get_connection(**table_combo["profile2"])
