@@ -4,6 +4,6 @@ select =
     W
     F
 ignore =
-    W503 # Line break occurred before a binary operator
-    E501 # long line checking is done in black
+    W503
+    E501
 exclude = test/

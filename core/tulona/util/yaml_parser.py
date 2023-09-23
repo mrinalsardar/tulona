@@ -1,4 +1,3 @@
-from box import Box
 from ruamel.yaml import YAML
 
 

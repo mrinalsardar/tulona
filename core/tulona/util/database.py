@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, inspect, MetaData, Table
+from sqlalchemy import inspect, MetaData, Table
 
 
 def get_schemas_from_db(engine):

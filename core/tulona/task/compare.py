@@ -88,6 +88,9 @@ class CompareTask(BaseTask):
         df[row_hash_col] = pd.util.hash_pandas_object(obj=df, index=False)
         return df
 
+    def prepare_rows_dask(self, row_hash_col):
+        return dd.DataFrame()
+
     def compare_tables_pandas(
         self,
         connection1: ConnectionManager,
@@ -173,9 +176,70 @@ class CompareTask(BaseTask):
         tab2: str,
         primary_key: list = [],
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # TODO: Implement
+        row_hash_col = "row_hash"
+        primary_key = list(primary_key) if primary_key else None
 
-        return pd.DataFrame(), pd.DataFrame()
+        df1 = dd.read_sql_table(table_name=tab1, con=connection1.conn)
+        df2 = dd.read_sql_table(table_name=tab2, con=connection2.conn)
+
+        # ---------> Level 1: match the hashes of whole row
+        if primary_key:  # TODO: Need to test this
+            df1 = dd.concat(
+                [
+                    df1[primary_key],
+                    self.prepare_rows_dask(df1, row_hash_col=row_hash_col),
+                ],
+                axis=1,
+            )
+            df2 = pd.concat(
+                [
+                    df2[primary_key],
+                    self.prepare_rows_dask(df2, row_hash_col=row_hash_col),
+                ],
+                axis=1,
+            )
+        else:
+            df1 = self.prepare_rows_dask(df1, row_hash_col=row_hash_col)
+            df2 = self.prepare_rows_dask(df2, row_hash_col=row_hash_col)
+
+        df_merge = dd.merge(
+            left=df1,
+            right=df2,
+            on=primary_key if primary_key else row_hash_col,
+            how="outer",
+            suffixes=(f"_{connection1.database}", f"_{connection2.database}"),
+            indicator=True,
+        )
+
+        # mismtaches
+        df_mismatch = df_merge[df_merge["_merge"] != "both"].drop(row_hash_col, axis=1).compute()
+
+        # ---------> Level 2+: TODO
+
+        # ---------> Result
+        # metadiff
+        df1_extra_cols = list(set(df1.columns).difference(set(df2.columns)))
+        df2_extra_cols = list(set(df2.columns).difference(set(df1.columns)))
+
+        metadata = [
+            connection1.database,
+            connection2.database,
+            schema1,
+            schema2,
+            tab1,
+            tab2,
+            primary_key if primary_key else row_hash_col,
+            df1.shape[0],
+            df2.shape[0],
+            df_merge[df_merge["_merge"] == "both"].shape[0],
+            df_merge[df_merge["_merge"] == "left_only"].shape[0],
+            df_merge[df_merge["_merge"] == "right_only"].shape[0],
+            ", ".join(df1_extra_cols),
+            ", ".join(df2_extra_cols),
+        ]
+        df_meta = pd.DataFrame(data=[metadata], columns=RESULT_META_COLS)
+
+        return df_mismatch, df_meta
 
     def compare_tables(
         self,
@@ -226,11 +290,11 @@ class CompareTask(BaseTask):
         return df_mismatch, df_meta
 
     def prepare_table_list(
-            self,
-            config: list[Dict],
-            level: str,
-            table_combo_list: list=[]
-        ) -> list[Dict]:
+        self,
+        config: list[Dict],
+        level: str,
+        table_combo_list: list = []
+    ) -> list[Dict]:
         # TODO: consider using generator for table_combo_list as this list can be long
         all_profiles = self.profile["profiles"]
 
@@ -271,12 +335,12 @@ class CompareTask(BaseTask):
                     .intersection(set(database2_schemas))
                     .difference({"information_schema"})
                 )
-                database1_extra_schemas = list(
-                    set(database1_schemas).difference(set(database2_schemas))
-                )
-                database2_extra_schemas = list(
-                    set(database2_schemas).difference(set(database1_schemas))
-                )
+                # database1_extra_schemas = list(
+                #     set(database1_schemas).difference(set(database2_schemas))
+                # )
+                # database2_extra_schemas = list(
+                #     set(database2_schemas).difference(set(database1_schemas))
+                # )
 
                 log.debug(f"{common_schemas=}")
 
@@ -335,8 +399,8 @@ class CompareTask(BaseTask):
 
                 # To compare tables from to schema, table names should be same in both
                 common_tables = list(set(schema1_tables).intersection(set(schema2_tables)))
-                schema1_extra_tables = list(set(schema1_tables).difference(set(schema2_tables)))
-                schema2_extra_tables = list(set(schema2_tables).difference(set(schema1_tables)))
+                # schema1_extra_tables = list(set(schema1_tables).difference(set(schema2_tables)))
+                # schema2_extra_tables = list(set(schema2_tables).difference(set(schema1_tables)))
 
                 table_level_config = [
                     {
@@ -402,7 +466,7 @@ class CompareTask(BaseTask):
         log.debug(f"******* * Comparison level: {self.runtime.level}")
         log.debug(f"******* * Execution engine: {self.runtime.engine}")
         log.debug(f"******* * Output directory: {self.runtime.outdir}")
-        log.debug(f"*****************************************************")
+        log.debug("*****************************************************")
         log.debug("")
 
         self.results_dir = get_result_dir(
