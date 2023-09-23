@@ -1,2 +1,9 @@
 [flake8]
-max-line-length = 100
+select =
+    E
+    W
+    F
+ignore =
+    W503 # Line break occurred before a binary operator
+    E501 # long line checking is done in black
+exclude = test/

@@ -12,7 +12,10 @@ try:
 except ImportError:
     # the user has a downlevel version of setuptools.
     print("Error: tulona requires setuptools v40.1.0 or higher.")
-    print('Please upgrade setuptools with "pip install --upgrade setuptools" ' "and try again")
+    print(
+        'Please upgrade setuptools with "pip install --upgrade setuptools" '
+        "and try again"
+    )
     sys.exit(1)
 
 package_name = "tulona"
@@ -27,8 +30,8 @@ setup(
     packages=find_namespace_packages(include=["tulona", "tulona.*"]),
     include_package_data=True,
     entry_points={
-        'console_scripts': [
-            'tulona = tulona.cli.base:cli',
+        "console_scripts": [
+            "tulona = tulona.cli.base:cli",
         ],
     },
     install_requires=[

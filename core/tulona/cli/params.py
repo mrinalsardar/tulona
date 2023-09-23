@@ -4,7 +4,7 @@ import click
 level = click.option(
     "--level",
     help="Which level of entity is to be compared? One of database, schema & table",
-    type=click.STRING
+    type=click.STRING,
 )
 
 exec_engine = click.option(
@@ -15,8 +15,8 @@ exec_engine = click.option(
 
 outdir = click.option(
     "--outdir",
-    help="Where do you want me to write the result of the comparison and other related metadata?",
-    type=click.STRING
+    help="Directory to write the result of the comparison and other related metadata?",
+    type=click.STRING,
 )
 
 verbose = click.option(

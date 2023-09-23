@@ -3,21 +3,22 @@ import logging
 from tulona.task.compare import CompareTask
 from tulona.cli import params as p
 from tulona.config.profile import Profile
-from tulona.config.porject import Project
+from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.DEBUG, # TODO: Set level to INFO once verbosity is fixed
-    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+    level=logging.DEBUG,  # TODO: Set level to INFO once verbosity is fixed
+    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
+
 
 # command: tulona
 @click.group(
     context_settings={"help_option_names": ["-h", "--help"]},
     no_args_is_help=True,
-    epilog="Execute: tulona <command> -h/--help for more help with specific commands"
+    epilog="Execute: tulona <command> -h/--help for more help with specific commands",
 )
 @click.pass_context
 def cli(ctx):
@@ -50,7 +51,7 @@ def compare(ctx, **kwargs):
         # This setting doesn't enable debug level logging
         logging.basicConfig(
             level=logging.DEBUG,
-            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
         )
 
     prof = Profile()
@@ -67,6 +68,5 @@ def compare(ctx, **kwargs):
     task.execute()
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

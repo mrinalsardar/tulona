@@ -34,13 +34,14 @@ class Profile:
                 "Invalid profile config. Please check 'profiles.yml'"
             )
 
-
     def load_profile_config(self) -> None:
         profile_file_uri = self.profile_conf_path
         log.debug(f"Attempting to load profile config from {profile_file_uri}")
 
         if not path_exists(profile_file_uri):
-            raise TulonaProfileException(f"Profile file {profile_file_uri} does not exist.")
+            raise TulonaProfileException(
+                f"Profile file {profile_file_uri} does not exist."
+            )
 
         profile_dict_raw = read_yaml(profile_file_uri)
 

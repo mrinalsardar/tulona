@@ -12,7 +12,7 @@ from tulona.exceptions import (
 
 log = logging.getLogger(__name__)
 
-PROJECT_FILE_NAME = 'tulona-project.yml'
+PROJECT_FILE_NAME = "tulona-project.yml"
 
 
 class Project:
@@ -29,17 +29,16 @@ class Project:
         valid = True
 
         if not valid:
-            raise TulonaInvalidProjectConfigError(
-                "Project config is not valid"
-            )
-
+            raise TulonaInvalidProjectConfigError("Project config is not valid")
 
     def load_project_config(self) -> None:
         project_file_uri = self.project_conf_path
         log.debug(f"Attempting to load project config from {project_file_uri}")
 
         if not path_exists(project_file_uri):
-            raise TulonaProjectException(f"Project file {project_file_uri} does not exist.")
+            raise TulonaProjectException(
+                f"Project file {project_file_uri} does not exist."
+            )
 
         project_dict_raw = read_yaml(project_file_uri)
 

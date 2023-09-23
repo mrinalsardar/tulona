@@ -1,5 +1,5 @@
 import pytest
-from tulona.config.porject import Project
+from tulona.config.project import Project
 
 
 class TestProject:
