@@ -7,3 +7,13 @@ tulona-project.yaml
 *.pyc
 output
 .pytest_cache
+
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.env
+nosetests.xml
+coverage.xml
+*,cover

@@ -1,0 +1,12 @@
+[run]
+branch = True
+source = tulona
+
+[report]
+exclude_lines =
+    pragma: no cover
+
+    raise AssertionError
+    raise NotImplementedError
+
+ignore_errors = True

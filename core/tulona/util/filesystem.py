@@ -23,11 +23,11 @@ def create_or_replace_dir(d: Union[str, Path]) -> Path:
     p.mkdir()
     return p
 
+
 def get_output_base_dir(base: str) -> Path:
     return create_or_replace_dir(base)
+
 
 def get_result_dir(dir_dict: dict, base: Union[str, Path], key: str) -> Path:
     p = Path(get_output_base_dir(base), dir_dict[key])
     return create_or_replace_dir(p)
-
-

@@ -1,8 +1,5 @@
 import logging
-from typing import Any, Dict
 from pathlib import Path
-from itertools import chain, combinations
-from dataclasses import dataclass
 from tulona.util.filesystem import path_exists
 from tulona.util.yaml_parser import read_yaml
 from tulona.exceptions import (
@@ -12,7 +9,7 @@ from tulona.exceptions import (
 
 log = logging.getLogger(__name__)
 
-PROJECT_FILE_NAME = 'tulona_project.yml'
+PROJECT_FILE_NAME = "tulona-project.yml"
 
 
 class Project:
@@ -29,10 +26,7 @@ class Project:
         valid = True
 
         if not valid:
-            raise TulonaInvalidProjectConfigError(
-                "Project config is not valid"
-            )
-
+            raise TulonaInvalidProjectConfigError("Project config is not valid")
 
     def load_project_config(self) -> None:
         project_file_uri = self.project_conf_path
