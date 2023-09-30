@@ -88,8 +88,14 @@ class CompareTask(BaseTask):
         df[row_hash_col] = pd.util.hash_pandas_object(obj=df, index=False)
         return df
 
-    def prepare_rows_dask(self, row_hash_col):
-        return dd.DataFrame()
+    def prepare_rows_dask(self, df: dd.DataFrame, row_hash_col: str) -> dd.DataFrame:
+        df = df.apply(
+            lambda row: "|||".join([str(i) for i in row]), axis=1, meta=pd.Series(dtype="string")
+        ).to_frame("concat_value")
+        df[row_hash_col] = df.apply(
+            lambda row: hash(row["concat_value"]), axis=1, meta=pd.Series(dtype="int64")
+        )
+        return df
 
     def compare_tables_pandas(
         self,
@@ -174,13 +180,13 @@ class CompareTask(BaseTask):
         schema2: str,
         tab1: str,
         tab2: str,
-        primary_key: list = [],
+        primary_key: list = None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         row_hash_col = "row_hash"
         primary_key = list(primary_key) if primary_key else None
 
-        df1 = dd.read_sql_table(table_name=tab1, con=connection1.conn)
-        df2 = dd.read_sql_table(table_name=tab2, con=connection2.conn)
+        df1 = dd.read_sql_table(table_name=tab1, con=connection1.conn, index_col=None)
+        df2 = dd.read_sql_table(table_name=tab2, con=connection2.conn, index_col=None)
 
         # ---------> Level 1: match the hashes of whole row
         if primary_key:  # TODO: Need to test this
@@ -191,7 +197,7 @@ class CompareTask(BaseTask):
                 ],
                 axis=1,
             )
-            df2 = pd.concat(
+            df2 = dd.concat(
                 [
                     df2[primary_key],
                     self.prepare_rows_dask(df2, row_hash_col=row_hash_col),
