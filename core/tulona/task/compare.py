@@ -97,6 +97,9 @@ class CompareTask(BaseTask):
         )
         return df
 
+    def compare_dataframes_pandas(df1: pd.DataFrame, df2: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        pass
+
     def compare_tables_pandas(
         self,
         connection1: ConnectionManager,

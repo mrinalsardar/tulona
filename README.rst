@@ -8,4 +8,4 @@ Features
 
 Development Environment Setup
 -----------------------------
-* For live installation execute `pip install --editable .` under the `core` directory.
+* For live installation execute `pip install --editable core`.
