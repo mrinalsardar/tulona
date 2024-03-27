@@ -11,6 +11,15 @@ Development Environment Setup
 * For live installation execute `pip install --editable core`.
 
 
+Build wheel executable
+----------------------
+* Execute `python core/setup.py bdist_wheel`
+
+Install wheel executable file
+-----------------------------
+* Execute `pip install <wheel-file.whl>`
+
+
 Sample profiles.yml
 ----------------------
 .. code-block:: yaml

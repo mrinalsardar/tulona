@@ -31,6 +31,7 @@ setup(
         ],
     },
     install_requires=[
+        "wheel",
         "click~=8.1",
         # "dask[complete]~=2023.8.1",
         # "python-box[all]~=7.1",
