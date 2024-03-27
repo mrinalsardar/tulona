@@ -2,7 +2,7 @@ import click
 import logging
 from tulona.task.scan import ScanTask
 from tulona.task.profile import ProfileTask
-from tulona.task.compare import CompareTask
+from tulona.task.compare import CompareDataTask
 from tulona.task.test_connection import TestConnectionTask
 from tulona.cli import params as p
 from tulona.config.profile import Profile
@@ -48,8 +48,8 @@ def test_connection(ctx, **kwargs):
     proj = Project()
 
     ctx.obj = ctx.obj or {}
-    ctx.obj["profile"] = prof.load_profile_config()
     ctx.obj["project"] = proj.load_project_config()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
 
     datasource_list = kwargs['datasources'].split(',')
 
@@ -77,10 +77,8 @@ def scan(ctx, **kwargs):
     proj = Project()
 
     ctx.obj = ctx.obj or {}
-    ctx.obj["profile"] = prof.load_profile_config()
     ctx.obj["project"] = proj.load_project_config()
-    # TODO: Need to think more about having guardrails for eligibility. Do we need it?
-    # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
     datasource_list = kwargs['datasources'].split(',')
@@ -109,10 +107,8 @@ def profile(ctx, **kwargs):
     proj = Project()
 
     ctx.obj = ctx.obj or {}
-    ctx.obj["profile"] = prof.load_profile_config()
     ctx.obj["project"] = proj.load_project_config()
-    # TODO: Need to think more about having guardrails for eligibility. Do we need it?
-    # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
     datasource_list = kwargs['datasources'].split(',')
@@ -122,12 +118,14 @@ def profile(ctx, **kwargs):
 
 
 # command: tulona compare
-@cli.command("compare")
+@cli.command("compare-data")
 @click.pass_context
 @p.exec_engine
 @p.outdir
 @p.verbose
-def compare(ctx, **kwargs):
+@p.sample_count
+@p.unique_key
+def compare_data(ctx, **kwargs):
     """Compares two data entities"""
 
     if kwargs["verbose"]:
@@ -142,15 +140,20 @@ def compare(ctx, **kwargs):
     proj = Project()
 
     ctx.obj = ctx.obj or {}
-    ctx.obj["profile"] = prof.load_profile_config()
     ctx.obj["project"] = proj.load_project_config()
-    # TODO: Need to think more about having guardrails for eligibility. Do we need it?
-    # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
     datasource_list = kwargs['datasources'].split(',')
 
-    task = CompareTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
+    task = CompareDataTask(
+        profile=ctx.obj["profile"],
+        project=ctx.obj["project"],
+        runtime=ctx.obj["runtime"],
+        datasources=datasource_list,
+        sample_count=kwargs['sample_count'],
+        unique_key=kwargs['unique_key']
+    )
     task.execute()
 
 

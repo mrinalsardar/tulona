@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from tulona.task.base import BaseTask
 from tulona.config.runtime import RunConfig
 from typing import Dict, List
+from tulona.util.profiles import get_connection_profile
 
 log = logging.getLogger(__name__)
 
@@ -24,12 +25,7 @@ class ScanTask(BaseTask):
         for ds in self.datasources:
             log.debug(f"Testing connection to data source: {ds}")
 
-            all_datasources = self.project['datasources']
-            ds_profile_name = (
-                [dc for dc in all_datasources if dc['name'] == ds][0]['connection_profile']
-            )
-            connection_profile = self.profile[self.project['name']]['profiles'][ds_profile_name]
-
+            connection_profile = get_connection_profile(self.profile, self.project, ds)
             try:
                 conman = self.get_connection_manager(conn_profile=connection_profile)
                 with conman.engine.open() as connection:

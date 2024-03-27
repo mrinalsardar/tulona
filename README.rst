@@ -13,8 +13,9 @@ Development Environment Setup
 
 Sample profiles.yml
 ----------------------
-.. code-block:: yml
+.. code-block:: yaml
   :linenos:
+
   integration_project: # project_name
     profiles:
       pgdb:
@@ -44,8 +45,9 @@ Sample profiles.yml
 
 Sample tulona-project.yml
 -------------------------
-.. code-block:: yml
+.. code-block:: yaml
   :linenos:
+
   version: '2.0'
   name: integration_project
   config-version: 1
