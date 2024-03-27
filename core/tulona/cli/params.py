@@ -28,8 +28,3 @@ sample_count = click.option(
     "--sample-count",
     help="Number of maximum records to be compared"
 )
-
-unique_key = click.option(
-    "--unique-key",
-    help="Common key column for comparison"
-)

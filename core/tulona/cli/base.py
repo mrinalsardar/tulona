@@ -124,7 +124,6 @@ def profile(ctx, **kwargs):
 @p.outdir
 @p.verbose
 @p.sample_count
-@p.unique_key
 def compare_data(ctx, **kwargs):
     """Compares two data entities"""
 
@@ -151,8 +150,7 @@ def compare_data(ctx, **kwargs):
         project=ctx.obj["project"],
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
-        sample_count=kwargs['sample_count'],
-        unique_key=kwargs['unique_key']
+        sample_count=kwargs['sample_count']
     )
     task.execute()
 

@@ -35,13 +35,14 @@ setup(
         # "dask[complete]~=2023.8.1",
         # "python-box[all]~=7.1",
         "ruamel.yaml~=0.18",
-        "SQLAlchemy~=2.0",
+        # "SQLAlchemy~=2.0",
         "psycopg2-binary~=2.9",
         "pymysql~=1.1",
         "cryptography~=42.0",
         "pytest~=8.1",
         "snowflake-sqlalchemy~=1.5",
-        "pyodbc~=5.1"
+        "pyodbc~=5.1",
+        "XlsxWriter~=3.2",
     ],
     python_requires=">=3.8",
 )
