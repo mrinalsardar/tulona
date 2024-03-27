@@ -1,6 +1,9 @@
 import click
 import logging
+from tulona.task.scan import ScanTask
+from tulona.task.profile import ProfileTask
 from tulona.task.compare import CompareTask
+from tulona.task.test_connection import TestConnectionTask
 from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project
@@ -25,21 +28,102 @@ def cli(ctx):
     """Tulona compares databases to find out differences"""
 
 
-# # command: tulona connect
-# @cli.command("connect")
-# @click.pass_context
-# def connect(ctx):
-#     """
-#     WIP - Tests the connection to all the database tools using
-#     the connection profiles from 'tulona_project.yml'
-#     """
-#     click.echo("Testing connections...")
+# command: tulona test-connection
+@cli.command("test-connection")
+@click.pass_context
+@p.exec_engine
+@p.outdir
+@p.verbose
+@p.datasources
+def test_connection(ctx, **kwargs):
+    """Scans data sources"""
+
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+
+    prof = Profile()
+    proj = Project()
+
+    ctx.obj = ctx.obj or {}
+    ctx.obj["profile"] = prof.load_profile_config()
+    ctx.obj["project"] = proj.load_project_config()
+
+    datasource_list = kwargs['datasources'].split(',')
+
+    task = TestConnectionTask(ctx.obj["profile"], ctx.obj["project"], datasource_list)
+    task.execute()
+
+
+# command: tulona scan
+@cli.command("scan")
+@click.pass_context
+@p.exec_engine
+@p.outdir
+@p.verbose
+@p.datasources
+def scan(ctx, **kwargs):
+    """Scans data sources"""
+
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+
+    prof = Profile()
+    proj = Project()
+
+    ctx.obj = ctx.obj or {}
+    ctx.obj["profile"] = prof.load_profile_config()
+    ctx.obj["project"] = proj.load_project_config()
+    # TODO: Need to think more about having guardrails for eligibility. Do we need it?
+    # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
+    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+
+    datasource_list = kwargs['datasources'].split(',')
+
+    task = ScanTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
+    task.execute()
+
+
+# command: tulona profile
+@cli.command("profile")
+@click.pass_context
+@p.exec_engine
+@p.outdir
+@p.verbose
+@p.datasources
+def profile(ctx, **kwargs):
+    """Scans data sources"""
+
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+
+    prof = Profile()
+    proj = Project()
+
+    ctx.obj = ctx.obj or {}
+    ctx.obj["profile"] = prof.load_profile_config()
+    ctx.obj["project"] = proj.load_project_config()
+    # TODO: Need to think more about having guardrails for eligibility. Do we need it?
+    # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
+    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+
+    datasource_list = kwargs['datasources'].split(',')
+
+    task = ProfileTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
+    task.execute()
 
 
 # command: tulona compare
 @cli.command("compare")
 @click.pass_context
-@p.level
 @p.exec_engine
 @p.outdir
 @p.verbose
@@ -64,7 +148,9 @@ def compare(ctx, **kwargs):
     # ctx.obj["eligible_conn_profiles"] = proj.get_eligible_connection_profiles()
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    task = CompareTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"])
+    datasource_list = kwargs['datasources'].split(',')
+
+    task = CompareTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
     task.execute()
 
 

@@ -1,21 +1,14 @@
 import click
 
-
-level = click.option(
-    "--level",
-    help="Which level of entity is to be compared? One of database, schema & table",
-    type=click.STRING,
-)
-
 exec_engine = click.option(
     "--engine",
-    help="Execution engine. Can be one of Pandas & Dask",
+    help="Execution engine. Can be one of Pandas right now",
     type=click.STRING
 )
 
 outdir = click.option(
     "--outdir",
-    help="Directory to write the result of the comparison and other related metadata?",
+    help="Directory to write the result of the comparison and other related metadata",
     type=click.STRING,
 )
 
@@ -24,4 +17,9 @@ verbose = click.option(
     "-v",
     is_flag=True,
     help="Show debug level logs"
+)
+
+datasources = click.option(
+    "--datasources",
+    help="Comma separated list of one or more datasource names defined in tulona-conf.yml file"
 )

@@ -14,3 +14,4 @@ coverage
 black
 isort
 pytest-cov
+snowflake-sqlalchemy
