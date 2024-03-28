@@ -13,7 +13,7 @@ Development Environment Setup
 
 Build wheel executable
 ----------------------
-* Execute `python core/setup.py bdist_wheel`
+* Execute `python -m build` under the `core` folder.
 
 Install wheel executable file
 -----------------------------
