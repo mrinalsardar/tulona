@@ -45,6 +45,7 @@ setup(
         "pytest~=8.1",
         "snowflake-sqlalchemy~=1.5",
         "pyodbc~=5.1",
+        "pandas~=2.2",
         "XlsxWriter~=3.2",
     ],
     python_requires=f">={python_requirement}",
