@@ -126,8 +126,17 @@ class CompareDataTask(BaseTask):
             raise NotImplementedError("Table comparison without unique keys yet to be implementd")
 
         # Compare
-        df1 = df1.rename(columns={c:c+'_'+datasource1.replace('_','') for c in df1.columns})
-        df2 = df2.rename(columns={c:c+'_'+datasource2.replace('_','') for c in df2.columns})
+        common_columns = list(
+            set(df1.columns).intersection(set(df2.columns))
+            .union(set(ds_dict1['unique_key']))
+            .union(set(ds_dict2['unique_key']))
+        )
+        df1 = df1[common_columns].rename(
+            columns={c:c+'_'+datasource1.replace('_','') for c in df1.columns}
+        )
+        df2 = df2[common_columns].rename(
+            columns={c:c+'_'+datasource2.replace('_','') for c in df2.columns}
+        )
         df_merge = pd.merge(
             left=df1 if i%2 == 0 else df2,
             right=df2 if i%2 == 0 else df1,
