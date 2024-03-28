@@ -42,6 +42,7 @@ Sample profiles.yml
         username: user
         password: password
       snowflake:
+        type: snowflake
         account: snowflake_account
         warehouse: dev_x_small
         database: dev_stage
@@ -50,6 +51,7 @@ Sample profiles.yml
         private_key: 'rsa_key.p8'
         private_key_passphrase: 444444
       mssql:
+        type: mssql
         connection_string: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=dagger;DATABASE=test;UID=user;PWD=password'
 
 Sample tulona-project.yml
