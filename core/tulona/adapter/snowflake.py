@@ -14,6 +14,7 @@ def get_snowflake_engine(conn_profile: Dict):
             URL(
                 account=conn_profile['account'],
                 warehouse=conn_profile['warehouse'],
+                role=conn_profile['role'] if 'role' in conn_profile else None,
                 database=conn_profile['database'],
                 schema=conn_profile['schema'],
                 user=conn_profile['user'],
