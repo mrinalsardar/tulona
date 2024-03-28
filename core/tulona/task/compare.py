@@ -14,6 +14,7 @@ from tulona.util.sql import (
     build_filter_query_expression
 )
 from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.excel import highlight_false
 
 log = logging.getLogger(__name__)
 
@@ -49,14 +50,19 @@ class CompareDataTask(BaseTask):
         return df
 
 
-    def write_output(self, df: pd.DataFrame, datasource1, datasource2):
-        df = df[sorted(df.columns.tolist())]
-        ds1 = datasource1.replace('_', '')
-        ds2 = datasource2.replace('_', '')
+    def write_output(self, df: pd.DataFrame, ds1, ds2):
         outdir = create_dir_if_not_exist(self.project['outdir'])
         out_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         outfile = f"{ds1}_{ds2}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
+
+        # background color for mismatches
+        df = (
+            df.style
+            # TODO: change applymap to map once pandas is upgraded to 2.x
+            .applymap(highlight_false, props='background-color:yellow;')
+        )
+
         log.debug(f"Writing output into: {outfile_fqn}")
         df.to_excel(outfile_fqn, sheet_name='Data Comparison', index=False)
 
@@ -128,8 +134,8 @@ class CompareDataTask(BaseTask):
         # Compare
         common_columns = list(
             set(df1.columns).intersection(set(df2.columns))
-            .union(set(ds_dict1['unique_key']))
-            .union(set(ds_dict2['unique_key']))
+            .union({ds_dict1['unique_key']})
+            .union({ds_dict2['unique_key']})
         )
         df1 = df1[common_columns].rename(
             columns={c:c+'_'+datasource1.replace('_','') for c in df1.columns}
@@ -137,16 +143,27 @@ class CompareDataTask(BaseTask):
         df2 = df2[common_columns].rename(
             columns={c:c+'_'+datasource2.replace('_','') for c in df2.columns}
         )
+
+        ds1_compressed = datasource1.replace('_','')
+        ds2_compressed = datasource2.replace('_','')
+
         df_merge = pd.merge(
             left=df1 if i%2 == 0 else df2,
             right=df2 if i%2 == 0 else df1,
-            left_on=ds_dict1['unique_key']+'_'+datasource1.replace('_',''),
-            right_on=ds_dict2['unique_key']+'_'+datasource2.replace('_',''),
+            left_on=ds_dict1['unique_key'] + '_' + ds1_compressed,
+            right_on=ds_dict2['unique_key'] + '_' + ds2_compressed,
             validate='one_to_one'
         )
 
+        for col in common_columns:
+            df_merge[f"{col}_zmatch"] = (
+                df_merge[f"{col}_{ds1_compressed}"] == df_merge[f"{col}_{ds2_compressed}"]
+            )
+
+        df_merge = df_merge[sorted(df_merge.columns.tolist())]
+
         log.debug("Writing comparison result")
-        self.write_output(df_merge, datasource1, datasource2)
+        self.write_output(df_merge, ds1_compressed, ds2_compressed)
 
         end_time = time.time()
         log.info("Finished task: Compare")

@@ -46,6 +46,7 @@ setup(
         "pyodbc~=5.1",
         "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
         "XlsxWriter~=3.2",
+        "Jinja2~=3.1",
     ],
     python_requires=f">={python_requirement}",
     options={"bdist_wheel": {"python_tag": f"py{python_requirement.replace('.', '')}"}},
