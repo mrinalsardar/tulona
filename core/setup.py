@@ -19,6 +19,8 @@ package_name = "tulona"
 package_version = "0.1.0"
 description = """Database comparison is easier than ever with tulona."""
 
+python_requirement = "3.8"
+
 setup(
     name=package_name,
     version=package_version,
@@ -45,5 +47,6 @@ setup(
         "pyodbc~=5.1",
         "XlsxWriter~=3.2",
     ],
-    python_requires=">=3.8",
+    python_requires=f">={python_requirement}",
+    options={"bdist_wheel": {"python_tag": f"py{python_requirement.replace('.', '')}"}},
 )
