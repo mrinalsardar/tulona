@@ -12,6 +12,7 @@ from tulona.util.sql import (
     get_query_output_as_df,
     build_filter_query_expression
 )
+from tulona.util.filesystem import create_dir_if_not_exist
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class CompareDataTask(BaseTask):
             query = f"select * from {table_name} where {query_expr}"
         else:
             query = get_sample_row_query(
-                dbtype=self.profile['profiles'][extract_profile_name(self.project, datasource)],
+                dbtype=self.profile['profiles'][extract_profile_name(self.project, datasource)]['type'],
                 table_name=table_name
             )
 
@@ -48,7 +49,9 @@ class CompareDataTask(BaseTask):
 
 
     def write_output(self, df: pd.DataFrame, datasource1, datasource2):
-        outfile_fqn = Path(self.project['outdir'], f"{datasource1}_{datasource2}_comparison.xlsx")
+        df = df[sorted(df.columns.tolist())]
+        outdir = create_dir_if_not_exist(self.project['outdir'])
+        outfile_fqn = Path(outdir, f"{datasource1}_{datasource2}_data_comparison.xlsx")
         df.to_excel(outfile_fqn, sheet_name='Data Comparison')
 
 
@@ -74,19 +77,24 @@ class CompareDataTask(BaseTask):
                 log.debug(f"Extraction iteration: {i+1}")
 
                 df1 = self.get_table_data(datasource=datasource1)
-                if ds_dict1['unique_key'] not in df1.columns:
+                if df1.shape[0] == 0:
+                    raise ValueError(f"Table {table_name1} doesn't have any data")
+
+                df1 = df1.rename(columns={c:c.lower() for c in df1.columns})
+
+                if ds_dict1['unique_key'] not in df1.columns.tolist():
                     raise ValueError(
                         f"Unique key {ds_dict1['unique_key']} not present in {table_name1}"
                     )
-
-                if df1.shape[0] == 0:
-                    raise ValueError(f"Table {table_name1} doesn't have any data")
 
                 df2 = self.get_table_data(
                     datasource=datasource2,
                     query_expr=build_filter_query_expression(df1, ds_dict1['unique_key'])
                 )
-                if ds_dict2['unique_key'] not in df2.columns:
+
+                df2 = df2.rename(columns={c:c.lower() for c in df2.columns})
+
+                if ds_dict2['unique_key'] not in df2.columns.tolist():
                     raise ValueError(
                         f"Unique key {ds_dict2['unique_key']} not present in {table_name2}"
                     )
@@ -121,10 +129,9 @@ class CompareDataTask(BaseTask):
             right_on=ds_dict2['unique_key']+'_'+datasource2.replace('_',''),
             validate='one_to_one'
         )
-        df_comp = df_merge[sorted(df_merge.columns)]
 
         log.debug("Writing comparison result")
-        self.write_output(df_comp, datasource1, datasource2)
+        self.write_output(df_merge, datasource1, datasource2)
 
         end_time = time.time()
         log.info("Finished task: Compare")

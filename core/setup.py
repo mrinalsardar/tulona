@@ -33,7 +33,6 @@ setup(
         ],
     },
     install_requires=[
-        "wheel",
         "click~=8.1",
         # "dask[complete]~=2023.8.1",
         # "python-box[all]~=7.1",
@@ -45,7 +44,7 @@ setup(
         "pytest~=8.1",
         "snowflake-sqlalchemy~=1.5",
         "pyodbc~=5.1",
-        "pandas~=2.2",
+        "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
         "XlsxWriter~=3.2",
     ],
     python_requires=f">={python_requirement}",

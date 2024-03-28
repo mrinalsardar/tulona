@@ -1,5 +1,4 @@
 import pandas as pd
-import sqlalchemy as sa
 
 def get_sample_row_query(dbtype: str, table_name: str):
     if dbtype.lower() == 'snowflake':
@@ -8,8 +7,8 @@ def get_sample_row_query(dbtype: str, table_name: str):
     return query
 
 def get_query_output_as_df(connection_manager, query_text: str):
-    with connection_manager.engine.begin() as conn:
-        df = pd.read_sql_query(sa.text(query_text), conn)
+    with connection_manager.engine.connect() as conn:
+        df = pd.read_sql_query(query_text, conn)
     return df
 
 def build_filter_query_expression(df: pd.DataFrame, unique_key: str):

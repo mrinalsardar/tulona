@@ -23,6 +23,11 @@ def create_or_replace_dir(d: Union[str, Path]) -> Path:
     p.mkdir()
     return p
 
+def create_dir_if_not_exist(d: Union[str, Path]) -> Path:
+    p = Path(d)
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
 
 def get_output_base_dir(base: str) -> Path:
     return create_or_replace_dir(base)

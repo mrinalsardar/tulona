@@ -1,11 +1,12 @@
+import logging
 from typing import Dict
 from snowflake.sqlalchemy import URL
 from sqlalchemy import create_engine
 
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric import dsa
 from cryptography.hazmat.primitives import serialization
+
+logging.getLogger('snowflake').setLevel(logging.ERROR)
 
 def get_snowflake_engine(conn_profile: Dict):
 

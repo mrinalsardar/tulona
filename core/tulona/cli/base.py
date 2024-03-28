@@ -123,6 +123,7 @@ def profile(ctx, **kwargs):
 @p.exec_engine
 @p.outdir
 @p.verbose
+@p.datasources
 @p.sample_count
 def compare_data(ctx, **kwargs):
     """Compares two data entities"""

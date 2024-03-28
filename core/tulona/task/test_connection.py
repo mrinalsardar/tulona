@@ -25,8 +25,8 @@ class TestConnectionTask(BaseTask):
             connection_profile = get_connection_profile(self.profile, self.project, ds)
             try:
                 conman = self.get_connection_manager(conn_profile=connection_profile)
-                with conman.engine.open() as connection:
-                    results = connection.execute('select * from information_schema').fetchone()
+                with conman.engine.connect() as connection:
+                    results = connection.execute('select * from information_schema.tables').fetchone()
                     _ = results[0]
                     log.info("Connection successful")
             except Exception as exp:
