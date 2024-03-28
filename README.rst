@@ -45,6 +45,7 @@ Sample profiles.yml
         type: snowflake
         account: snowflake_account
         warehouse: dev_x_small
+        role: dev_role
         database: dev_stage
         schema: user_schema
         user: dev_user
