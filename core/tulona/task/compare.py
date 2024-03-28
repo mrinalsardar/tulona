@@ -2,6 +2,7 @@ import time
 import logging
 import pandas as pd
 from pathlib import Path
+from datetime import datetime
 from dataclasses import dataclass
 from tulona.task.base import BaseTask
 from tulona.config.runtime import RunConfig
@@ -51,8 +52,10 @@ class CompareDataTask(BaseTask):
     def write_output(self, df: pd.DataFrame, datasource1, datasource2):
         df = df[sorted(df.columns.tolist())]
         outdir = create_dir_if_not_exist(self.project['outdir'])
-        outfile_fqn = Path(outdir, f"{datasource1}_{datasource2}_data_comparison.xlsx")
-        df.to_excel(outfile_fqn, sheet_name='Data Comparison')
+        out_timestamp = datetime.now.strftime('%Y_%m_%d_%H_%M_%S')
+        outfile = f"{datasource1}_{datasource2}_data_comparison_{out_timestamp}.xlsx"
+        outfile_fqn = Path(outdir, outfile)
+        df.to_excel(outfile_fqn, sheet_name='Data Comparison', index=False)
 
 
     def execute(self):
