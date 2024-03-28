@@ -8,7 +8,7 @@ from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
-
+from tulona.exceptions import TulonaMissingArgumentError
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -38,6 +38,11 @@ def cli(ctx):
 def test_connection(ctx, **kwargs):
     """Scans data sources"""
 
+    if 'datasources' not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: test-connection"
+        )
+
     if kwargs["verbose"]:
         # TODO: Fix me
         # This setting doesn't enable debug level logging
@@ -66,6 +71,11 @@ def test_connection(ctx, **kwargs):
 @p.datasources
 def scan(ctx, **kwargs):
     """Scans data sources"""
+
+    if 'datasources' not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: scan"
+        )
 
     if kwargs["verbose"]:
         # TODO: Fix me
@@ -97,6 +107,11 @@ def scan(ctx, **kwargs):
 def profile(ctx, **kwargs):
     """Scans data sources"""
 
+    if 'datasources' not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: profile"
+        )
+
     if kwargs["verbose"]:
         # TODO: Fix me
         # This setting doesn't enable debug level logging
@@ -127,6 +142,11 @@ def profile(ctx, **kwargs):
 @p.sample_count
 def compare_data(ctx, **kwargs):
     """Compares two data entities"""
+
+    if 'datasources' not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: compare-data"
+        )
 
     if kwargs["verbose"]:
         # TODO: Fix me
