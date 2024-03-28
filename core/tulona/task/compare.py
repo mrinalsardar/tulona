@@ -51,10 +51,13 @@ class CompareDataTask(BaseTask):
 
     def write_output(self, df: pd.DataFrame, datasource1, datasource2):
         df = df[sorted(df.columns.tolist())]
+        ds1 = datasource1.replace('_', '')
+        ds2 = datasource2.replace('_', '')
         outdir = create_dir_if_not_exist(self.project['outdir'])
-        out_timestamp = datetime.now.strftime('%Y_%m_%d_%H_%M_%S')
-        outfile = f"{datasource1}_{datasource2}_data_comparison_{out_timestamp}.xlsx"
+        out_timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+        outfile = f"{ds1}_{ds2}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
+        log.debug(f"Writing output into: {outfile_fqn}")
         df.to_excel(outfile_fqn, sheet_name='Data Comparison', index=False)
 
 
