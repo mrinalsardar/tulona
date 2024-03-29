@@ -41,7 +41,6 @@ setup(
         "psycopg2-binary~=2.9",
         "pymysql~=1.1",
         "cryptography~=42.0",
-        "pytest~=8.1",
         "snowflake-sqlalchemy~=1.5",
         "pyodbc~=5.1",
         "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
