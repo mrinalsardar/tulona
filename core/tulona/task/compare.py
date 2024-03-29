@@ -15,6 +15,7 @@ from tulona.util.sql import (
 )
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.excel import highlight_false
+from tulona.util.project import extract_table_name_from_config
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +29,12 @@ class CompareDataTask(BaseTask):
     project: Dict
     runtime: RunConfig
     datasources: List[str]
-    sample_count: int=DEFAULT_VALUES['sample_count']
+    sample_count: int
+
+    # TODO: setting up default value for sample_count
+    # Could find a good/simple way to do it with dataclass
+    def get_sample_count(self):
+        return self.sample_count if self.sample_count else DEFAULT_VALUES['sample_count']
 
     def get_table_data(self, datasource, query_expr: str=None):
         connection_profile = get_connection_profile(
@@ -37,13 +43,16 @@ class CompareDataTask(BaseTask):
         conman = self.get_connection_manager(conn_profile=connection_profile)
 
         ds_dict = self.project['datasources'][datasource]
-        table_name = f"{ds_dict['database']}.{ds_dict['schema']}.{ds_dict['table']}"
+        dbtype = self.profile['profiles'][extract_profile_name(self.project, datasource)]['type']
+        table_name = extract_table_name_from_config(config=ds_dict, dbtype=dbtype)
+
         if query_expr:
             query = f"select * from {table_name} where {query_expr}"
         else:
             query = get_sample_row_query(
-                dbtype=self.profile['profiles'][extract_profile_name(self.project, datasource)]['type'],
-                table_name=table_name
+                dbtype=dbtype,
+                table_name=table_name,
+                sample_count=self.get_sample_count()
             )
 
         df = get_query_output_as_df(connection_manager=conman, query_text=query)

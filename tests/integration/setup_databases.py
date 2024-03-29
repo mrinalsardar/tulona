@@ -21,7 +21,7 @@ if __name__ == '__main__':
     log.info("Loading sample data into postgres and mysql tables")
     for csvf in Path(Path(__file__).resolve().parent, 'data').glob('*.csv'):
         log.debug(f"Loding file: {csvf}")
-        # schema_name = 'medical'
+        # schema_name = 'corporate'
         table_name = csvf.name.split('.')[0]
         log.debug(f"Loading to table: {table_name}")
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
                 # if not conn.dialect.has_schema(engine, schema_name):
                 #     engine.execute(schema.CreateSchema(schema_name))
 
-                # df.to_sql(table_name, conn, schema='medical', if_exists='replace')
+                # df.to_sql(table_name, conn, schema=schema_name, if_exists='replace')
                 df.to_sql(table_name, conn, if_exists='replace')
 
 
