@@ -10,14 +10,9 @@ def get_column_index(sheet, column: str):
     return None
 
 
-def highlight_mismatch_pair(excel_file, sheet, col1, col2):
+def highlight_mismatch_pair(excel_file, sheet):
     wb = load_workbook(excel_file)
     ws = wb[sheet]
-
-    col1_idx = get_column_index(sheet=ws, column=col1) - 1
-    col2_idx = get_column_index(sheet=ws, column=col2) - 1
-
-    print(f"col1_idx: {col1_idx} | col2_idx: {col2_idx}")
 
     yellow_fill = styles.PatternFill(
         start_color='FFFFFF00',

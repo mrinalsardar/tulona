@@ -71,9 +71,7 @@ class CompareDataTask(BaseTask):
         log.debug("Highlighting mismtach pairs")
         highlight_mismatch_pair(
             excel_file=outfile_fqn,
-            sheet='Data Comparison',
-            col1='age_mysqldbdbemployee',
-            col2='age_postgrespostgrespublicemployee'
+            sheet='Data Comparison'
         )
 
 
