@@ -44,7 +44,8 @@ setup(
         "snowflake-sqlalchemy~=1.5",
         "pyodbc~=5.1",
         "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
-        "XlsxWriter~=3.2",
+        # "XlsxWriter~=3.2",
+        "openpyxl~=3.1",
         "Jinja2~=3.1",
     ],
     python_requires=f">={python_requirement}",

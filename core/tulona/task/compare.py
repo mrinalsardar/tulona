@@ -14,7 +14,7 @@ from tulona.util.sql import (
     build_filter_query_expression
 )
 from tulona.util.filesystem import create_dir_if_not_exist
-from tulona.util.excel import highlight_mismatch
+from tulona.util.excel import highlight_mismatch_pair
 from tulona.util.project import extract_table_name_from_config
 
 log = logging.getLogger(__name__)
@@ -65,15 +65,16 @@ class CompareDataTask(BaseTask):
         outfile = f"{ds1}_{ds2}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
 
-        # background color for mismatches
-        df = (
-            df.style
-            # TODO: change applymap to map once pandas is upgraded to 2.x
-            .applymap(highlight_mismatch, props='background-color:yellow;')
-        )
-
         log.debug(f"Writing output into: {outfile_fqn}")
         df.to_excel(outfile_fqn, sheet_name='Data Comparison', index=False)
+
+        log.debug("Highlighting mismtach pairs")
+        highlight_mismatch_pair(
+            excel_file=outfile_fqn,
+            sheet='Data Comparison',
+            col1='age_mysqldbdbemployee',
+            col2='age_postgrespostgrespublicemployee'
+        )
 
 
     def execute(self):
@@ -163,15 +164,6 @@ class CompareDataTask(BaseTask):
             right_on=ds_dict2['unique_key'] + '_' + ds2_compressed,
             validate='one_to_one'
         )
-
-        # TODO: get rid of this once you find a way to highlight existing cells
-        # i.e. no need to create new f"{col}_zzmatch" column
-        for col in common_columns:
-            df_merge[f"{col}_zzmatch"] = 'mismatch'
-            df_merge.loc[
-                df_merge[f"{col}_{ds1_compressed}"] == df_merge[f"{col}_{ds2_compressed}"],
-                f"{col}_zzmatch"
-            ] = 'match'
 
         df_merge = df_merge[sorted(df_merge.columns.tolist())]
 
