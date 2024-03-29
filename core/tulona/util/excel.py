@@ -1,4 +1,4 @@
 
 
-def highlight_false(v, props=''):
-    return props if not v else None
+def highlight_mismatch(v, props=''):
+    return props if v == 'mismatch' else None
