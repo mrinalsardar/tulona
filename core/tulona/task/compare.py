@@ -16,6 +16,8 @@ from tulona.util.sql import (
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.excel import highlight_mismatch_pair
 from tulona.util.project import extract_table_name_from_config
+from tulona.util.dataframe import apply_column_exclusion
+from tulona.exceptions import TulonaMissingPrimaryKeyError
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +78,6 @@ class CompareDataTask(BaseTask):
 
 
     def execute(self):
-
         log.info("Starting task: Compare")
         start_time = time.time()
 
@@ -85,8 +86,9 @@ class CompareDataTask(BaseTask):
 
         datasource1, datasource2 = self.datasources
         ds_dict1 = self.project['datasources'][datasource1]
-        table_name1 = f"{ds_dict1['database']}.{ds_dict1['schema']}.{ds_dict1['table']}"
         ds_dict2 = self.project['datasources'][datasource2]
+
+        table_name1 = f"{ds_dict1['database']}.{ds_dict1['schema']}.{ds_dict1['table']}"
         table_name2 = f"{ds_dict2['database']}.{ds_dict2['schema']}.{ds_dict2['table']}"
 
         # Extract rows from both data sources
@@ -137,7 +139,14 @@ class CompareDataTask(BaseTask):
                     f"Could not find common data between {table_name1} and {table_name2}"
                 )
         else:
-            raise NotImplementedError("Table comparison without primary keys yet to be implementd")
+            raise TulonaMissingPrimaryKeyError(
+                "Primary key is required for data comparison"
+            )
+
+        # Exclude columns
+        log.debug("Excluding columns")
+        df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
+        df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
 
         # Compare
         common_columns = list(

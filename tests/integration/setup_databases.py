@@ -48,11 +48,16 @@ if __name__ == '__main__':
             log.debug(f"Loading {df.shape[0]} records into {cstr.split(':')[0]}.{table_name}")
             with engine.connect() as conn:
                 # conn.execute(f"create schema if not exists {schema_name}")
-                # conn.execute(schema.CreateSchema(name=f"{cstr.split('/')[-1]}.{schema_name}", if_not_exists=True))
+                # conn.execute(
+                #     schema.CreateSchema(
+                #         name=f"{cstr.split('/')[-1]}.{schema_name}",
+                #         if_not_exists=True
+                #     )
+                # )
                 # if not conn.dialect.has_schema(engine, schema_name):
                 #     engine.execute(schema.CreateSchema(schema_name))
 
-                # df.to_sql(table_name, conn, schema=schema_name, if_exists='replace')
-                df.to_sql(table_name, conn, if_exists='replace')
+                # df.to_sql(table_name, conn, schema=schema_name, if_exists='replace', index=False)
+                df.to_sql(table_name, conn, if_exists='replace', index=False)
 
 
