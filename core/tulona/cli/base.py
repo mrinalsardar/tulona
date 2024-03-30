@@ -7,7 +7,8 @@ from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
-from tulona.task.compare import CompareDataTask, CompareColumnTask
+from tulona.task.compare import CompareColumnTask, CompareDataTask
+
 # from tulona.task.profile import ProfileTask
 # from tulona.task.scan import ScanTask
 from tulona.task.test_connection import TestConnectionTask
@@ -20,6 +21,7 @@ logging.basicConfig(
 
 # TODO: Make use of command line arguments like exec_engine, outdir etc.
 # to override project config values.
+
 
 # command: tulona
 @click.group(

@@ -1,6 +1,6 @@
 import logging
 import time
-from dataclasses import dataclass, fields, _MISSING_TYPE
+from dataclasses import _MISSING_TYPE, dataclass, fields
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -8,7 +8,7 @@ from typing import Dict, List
 import pandas as pd
 
 from tulona.config.runtime import RunConfig
-from tulona.exceptions import TulonaMissingPrimaryKeyError
+from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
 from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.excel import highlight_mismatch_pair
@@ -17,11 +17,10 @@ from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.project import extract_table_name_from_config
 from tulona.util.sql import (
     build_filter_query_expression,
+    get_column_query,
     get_query_output_as_df,
     get_sample_row_query,
-    get_column_query,
 )
-from tulona.exceptions import TulonaMissingPropertyError
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +63,6 @@ class CompareDataTask(BaseTask):
         df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
 
-
     def write_output(self, df: pd.DataFrame, ds1, ds2):
         outdir = create_dir_if_not_exist(self.project["outdir"])
         out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -76,7 +74,6 @@ class CompareDataTask(BaseTask):
 
         log.debug("Highlighting mismtach pairs")
         highlight_mismatch_pair(excel_file=outfile_fqn, sheet="Data Comparison")
-
 
     def execute(self):
         log.info("Starting task: Compare")
@@ -132,8 +129,12 @@ class CompareDataTask(BaseTask):
 
                 else:
                     datasource2, datasource1 = self.datasources
-                    dbtype1 = self.profile["profiles"][extract_profile_name(self.project, datasource1)]["type"]
-                    dbtype2 = self.profile["profiles"][extract_profile_name(self.project, datasource2)]["type"]
+                    dbtype1 = self.profile["profiles"][
+                        extract_profile_name(self.project, datasource1)
+                    ]["type"]
+                    dbtype2 = self.profile["profiles"][
+                        extract_profile_name(self.project, datasource2)
+                    ]["type"]
                     table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
                     table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
 
@@ -186,7 +187,6 @@ class CompareDataTask(BaseTask):
         log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
 
 
-
 @dataclass
 class CompareColumnTask(BaseTask):
     profile: Dict
@@ -201,7 +201,6 @@ class CompareColumnTask(BaseTask):
             if not isinstance(field.default, _MISSING_TYPE) and getattr(self, field.name) is None:
                 setattr(self, field.name, field.default)
 
-
     def get_column_data(self, datasource, table, column):
         connection_profile = get_connection_profile(self.profile, self.project, datasource)
         conman = self.get_connection_manager(conn_profile=connection_profile)
@@ -209,7 +208,6 @@ class CompareColumnTask(BaseTask):
         query = get_column_query(dbtype, table, column)
         df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
-
 
     def write_result(self, df, ds1, ds2):
         outdir = create_dir_if_not_exist(self.project["outdir"])
@@ -220,7 +218,6 @@ class CompareColumnTask(BaseTask):
         log.debug(f"Writing output into: {outfile_fqn}")
         df.to_excel(outfile_fqn, sheet_name="Column Comparison", index=False)
 
-
     def execute(self):
         log.info("Starting task: compare-column")
         start_time = time.time()
@@ -229,26 +226,26 @@ class CompareColumnTask(BaseTask):
             raise ValueError("Comparison works between two entities, not more, not less.")
 
         datasource1, datasource2 = self.datasources
-        if ':' in datasource1 and ':' in datasource2:
-            datasource1, column1 = datasource1.split(':')
-            datasource2, column2 = datasource2.split(':')
-        elif ':' in datasource1:
-            datasource1, column1 = datasource1.split(':')
+        if ":" in datasource1 and ":" in datasource2:
+            datasource1, column1 = datasource1.split(":")
+            datasource2, column2 = datasource2.split(":")
+        elif ":" in datasource1:
+            datasource1, column1 = datasource1.split(":")
             column2 = column1
-        elif ':' in datasource2:
-            datasource2, column2 = datasource2.split(':')
+        elif ":" in datasource2:
+            datasource2, column2 = datasource2.split(":")
             column1 = column2
         elif (
-            'compare_column' in self.project["datasources"][datasource1]
-            and 'compare_column' in self.project["datasources"][datasource2]
+            "compare_column" in self.project["datasources"][datasource1]
+            and "compare_column" in self.project["datasources"][datasource2]
         ):
-            column1 = self.project["datasources"][datasource1]['compare_column']
-            column2 = self.project["datasources"][datasource2]['compare_column']
-        elif 'compare_column' in self.project["datasources"][datasource1]:
-            column1 = self.project["datasources"][datasource1]['compare_column']
+            column1 = self.project["datasources"][datasource1]["compare_column"]
+            column2 = self.project["datasources"][datasource2]["compare_column"]
+        elif "compare_column" in self.project["datasources"][datasource1]:
+            column1 = self.project["datasources"][datasource1]["compare_column"]
             column2 = column1
-        elif 'compare_column' in self.project["datasources"][datasource2]:
-            column2 = self.project["datasources"][datasource2]['compare_column']
+        elif "compare_column" in self.project["datasources"][datasource2]:
+            column2 = self.project["datasources"][datasource2]["compare_column"]
             column1 = column2
         else:
             raise TulonaMissingPropertyError(
@@ -261,7 +258,6 @@ class CompareColumnTask(BaseTask):
                 "3. <datasource1>:<col>,<datasource2>"
                 "4. <datasource1>,<datasource2>:<col>"
             )
-
 
         ds_dict1 = self.project["datasources"][datasource1]
         ds_dict2 = self.project["datasources"][datasource2]
@@ -289,7 +285,7 @@ class CompareColumnTask(BaseTask):
             how="outer",
             suffixes=["_left_" + ds1_compressed, "_right_" + ds2_compressed],
             validate="one_to_one",
-            indicator="presence"
+            indicator="presence",
         )
 
         log.debug("Writing comparison result")
