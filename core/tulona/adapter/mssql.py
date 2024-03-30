@@ -1,6 +1,8 @@
 from typing import Dict
-from sqlalchemy.engine import URL
+
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
+
 from tulona.exceptions import TulonaMissingPropertyError
 
 

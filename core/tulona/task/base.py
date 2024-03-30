@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Dict
+
 from tulona.adapter.connection import ConnectionManager
 from tulona.exceptions import TulonaNotImplementedError
 

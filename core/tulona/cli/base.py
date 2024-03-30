@@ -1,14 +1,16 @@
-import click
 import logging
-from tulona.task.scan import ScanTask
-from tulona.task.profile import ProfileTask
-from tulona.task.compare import CompareDataTask
-from tulona.task.test_connection import TestConnectionTask
+
+import click
+
 from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
+from tulona.task.compare import CompareDataTask
+from tulona.task.profile import ProfileTask
+from tulona.task.scan import ScanTask
+from tulona.task.test_connection import TestConnectionTask
 
 log = logging.getLogger(__name__)
 logging.basicConfig(

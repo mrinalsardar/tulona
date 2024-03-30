@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-
 RUNTIME_DEFAULTS = {
     "ENGINE": "pandas",
     "OUTDIR": "output",

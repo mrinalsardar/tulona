@@ -1,10 +1,11 @@
 import logging
 from dataclasses import dataclass
+
 from tulona.adapter.base.connection import BaseConnectionManager
-from tulona.adapter.snowflake import get_snowflake_engine
 from tulona.adapter.mssql import get_mssql_engine
 from tulona.adapter.mysql import get_mysql_engine
 from tulona.adapter.postgres import get_postgres_engine
+from tulona.adapter.snowflake import get_snowflake_engine
 from tulona.exceptions import TulonaNotImplementedError
 
 log = logging.getLogger(__name__)

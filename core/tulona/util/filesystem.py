@@ -1,5 +1,5 @@
-from typing import Union
 from pathlib import Path
+from typing import Union
 
 
 def path_exists(p: Union[str, Path]) -> bool:

@@ -1,8 +1,9 @@
-import time
 import logging
+import time
 from dataclasses import dataclass
-from tulona.task.base import BaseTask
 from typing import Dict, List
+
+from tulona.task.base import BaseTask
 from tulona.util.profiles import get_connection_profile
 
 log = logging.getLogger(__name__)

@@ -1,23 +1,22 @@
-import time
 import logging
-import pandas as pd
-from pathlib import Path
-from datetime import datetime
+import time
 from dataclasses import dataclass
-from tulona.task.base import BaseTask
-from tulona.config.runtime import RunConfig
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
-from tulona.util.profiles import get_connection_profile, extract_profile_name
-from tulona.util.sql import (
-    get_sample_row_query,
-    get_query_output_as_df,
-    build_filter_query_expression,
-)
-from tulona.util.filesystem import create_dir_if_not_exist
-from tulona.util.excel import highlight_mismatch_pair
-from tulona.util.project import extract_table_name_from_config
-from tulona.util.dataframe import apply_column_exclusion
+
+import pandas as pd
+
+from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError
+from tulona.task.base import BaseTask
+from tulona.util.dataframe import apply_column_exclusion
+from tulona.util.excel import highlight_mismatch_pair
+from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.profiles import extract_profile_name, get_connection_profile
+from tulona.util.project import extract_table_name_from_config
+from tulona.util.sql import (build_filter_query_expression,
+                             get_query_output_as_df, get_sample_row_query)
 
 log = logging.getLogger(__name__)
 

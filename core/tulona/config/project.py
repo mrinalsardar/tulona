@@ -1,8 +1,10 @@
 import logging
 from pathlib import Path
+
+from tulona.exceptions import (TulonaInvalidProjectConfigError,
+                               TulonaProjectException)
 from tulona.util.filesystem import path_exists
 from tulona.util.yaml_parser import read_yaml
-from tulona.exceptions import TulonaInvalidProjectConfigError, TulonaProjectException
 
 log = logging.getLogger(__name__)
 
