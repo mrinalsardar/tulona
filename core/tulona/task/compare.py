@@ -1,6 +1,6 @@
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, _MISSING_TYPE
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -34,12 +34,14 @@ class CompareDataTask(BaseTask):
     project: Dict
     runtime: RunConfig
     datasources: List[str]
-    sample_count: int
+    sample_count: int = DEFAULT_VALUES["sample_count"]
 
-    # TODO: setting up default value for sample_count
-    # Could find a good/simple way to do it with dataclass
-    def get_sample_count(self):
-        return self.sample_count if self.sample_count else DEFAULT_VALUES["sample_count"]
+    # Support for default values
+    def __post_init__(self):
+        for field in fields(self):
+            # If there is a default and the value of the field is none we can assign a value
+            if not isinstance(field.default, _MISSING_TYPE) and getattr(self, field.name) is None:
+                setattr(self, field.name, field.default)
 
     def get_table_data(self, datasource, query_expr: str = None):
         connection_profile = get_connection_profile(self.profile, self.project, datasource)
@@ -53,7 +55,7 @@ class CompareDataTask(BaseTask):
             query = f"select * from {table_name} where {query_expr}"
         else:
             query = get_sample_row_query(
-                dbtype=dbtype, table_name=table_name, sample_count=self.get_sample_count()
+                dbtype=dbtype, table_name=table_name, sample_count=self.sample_count
             )
 
         df = get_query_output_as_df(connection_manager=conman, query_text=query)
@@ -86,7 +88,7 @@ class CompareDataTask(BaseTask):
         table_name2 = f"{ds_dict2['database']}.{ds_dict2['schema']}.{ds_dict2['table']}"
 
         # Extract rows from both data sources
-        log.debug("Extracting common data from both tables")
+        log.debug(f"Trying to extract {self.sample_count} common records from both data sources")
         if "primary_key" in ds_dict1 and "primary_key" in ds_dict2:
             i = 0
             while i < 10:
