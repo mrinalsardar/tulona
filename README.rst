@@ -1,6 +1,8 @@
 Tulona
 ======
 
+|Build Status| |Coverage|
+
 Features
 --------
 * Compare databases
@@ -87,3 +89,10 @@ Sample tulona-project.yml
       primary_key: employee_id
       exclude_columns:
         - phone_number
+
+
+.. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml/badge.svg
+   :target: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml
+.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/mrinalsardar/tulona/branch/main
+   :alt: Coverage status
