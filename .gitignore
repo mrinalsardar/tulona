@@ -8,6 +8,7 @@ tulona-project.yaml
 output
 .pytest_cache
 dist/
+build/
 
 htmlcov/
 .tox/

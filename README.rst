@@ -13,7 +13,7 @@ Development Environment Setup
 
 Build wheel executable
 ----------------------
-* Execute `python -m build` under the `core` folder.
+* Execute `python -m build` under root dierctory.
 
 Install wheel executable file
 -----------------------------
@@ -29,16 +29,16 @@ Sample profiles.yml
     profiles:
       pgdb:
         type: postgres
-        host: db_pg
+        host: localhost
         port: 5432
-        dbname: postgres
+        database: postgres
         username: postgres
         password: postgres
       mydb:
         type: mysql
-        host: db_mysql
+        host: localhost
         port: 3306
-        dbname: db
+        database: db
         username: user
         password: password
       snowflake:
@@ -69,32 +69,21 @@ Sample tulona-project.yml
 
   # This is just the list of data sources, doesn't mean tulona will run tasks for all of them.
   # Datasources need to be picked in the CLI command to run tasks against.
-  # Datasources can be present at database, schema as well as table level granularity.
-  # Mentioning only database means both databases has (or should have) same schemas and tables.
-  # Sames goes for skipping table names.
-  # IMPORTANT: Names must be unique
+  # Right now they are details about tables only.
   datasources:
-    - name: postgres_postgres
-      connection_profile: pgdb
-      database: postgres
-    - name: mysql_db
-      connection_profile: mydb
-      database: db
-    - name: postgres_postgres_public
+    postgres_postgres_public_employee:
       connection_profile: pgdb
       database: postgres
       schema: public
-    - name: mysql_db_db
+      table: employee
+      primary_key: employee_id
+      exclude_columns:
+        - name
+    mysql_db_db_employee:
       connection_profile: mydb
       database: db
       schema: db
-    - name: postgres_postgres_public_reports
-      connection_profile: pgdb
-      database: postgres
-      schema: public
-      table: reports
-    - name: mysql_db_db_reports
-      connection_profile: mydb
-      database: db
-      schema: db
-      table: reports
+      table: employee
+      primary_key: employee_id
+      exclude_columns:
+        - phone_number
