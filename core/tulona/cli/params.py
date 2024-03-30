@@ -1,9 +1,7 @@
 import click
 
 exec_engine = click.option(
-    "--engine",
-    help="Execution engine. Can be one of Pandas right now",
-    type=click.STRING
+    "--engine", help="Execution engine. Can be one of Pandas right now", type=click.STRING
 )
 
 outdir = click.option(
@@ -12,19 +10,11 @@ outdir = click.option(
     type=click.STRING,
 )
 
-verbose = click.option(
-    "--verbose",
-    "-v",
-    is_flag=True,
-    help="Show debug level logs"
-)
+verbose = click.option("--verbose", "-v", is_flag=True, help="Show debug level logs")
 
 datasources = click.option(
     "--datasources",
-    help="Comma separated list of one or more datasource names defined in tulona-conf.yml file"
+    help="Comma separated list of one or more datasource names defined in tulona-conf.yml file",
 )
 
-sample_count = click.option(
-    "--sample-count",
-    help="Number of maximum records to be compared"
-)
+sample_count = click.option("--sample-count", help="Number of maximum records to be compared")

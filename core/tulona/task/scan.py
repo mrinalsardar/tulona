@@ -29,7 +29,7 @@ class ScanTask(BaseTask):
             try:
                 conman = self.get_connection_manager(conn_profile=connection_profile)
                 with conman.engine.open() as connection:
-                    results = connection.execute('select * from information_schema').fetchone()
+                    results = connection.execute("select * from information_schema").fetchone()
             except Exception as exp:
                 log.error(f"Connection to data source {ds} failed because of: {exp}")
 

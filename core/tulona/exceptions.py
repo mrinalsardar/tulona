@@ -39,11 +39,13 @@ class TulonaInvalidProfileConfigError(Exception):
         self.formatted_message = f"ERROR: {self.message}"
         super().__init__(self.formatted_message)
 
+
 class TulonaMissingPropertyError(Exception):
     def __init__(self, message: str):
         self.message = message
         self.formatted_message = f"ERROR: {self.message}"
         super().__init__(self.formatted_message)
+
 
 class TulonaMissingArgumentError(Exception):
     def __init__(self, message: str):
@@ -51,11 +53,13 @@ class TulonaMissingArgumentError(Exception):
         self.formatted_message = f"ERROR: {self.message}"
         super().__init__(self.formatted_message)
 
+
 class TulonaMissingPrimaryKeyError(Exception):
     def __init__(self, message: str):
         self.message = message
         self.formatted_message = f"ERROR: {self.message}"
         super().__init__(self.formatted_message)
+
 
 class TulonaFundamentalError(Exception):
     def __init__(self, message: str):

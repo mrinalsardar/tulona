@@ -38,7 +38,7 @@ def cli(ctx):
 def test_connection(ctx, **kwargs):
     """Scans data sources"""
 
-    if 'datasources' not in kwargs:
+    if "datasources" not in kwargs:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: test-connection"
         )
@@ -54,9 +54,9 @@ def test_connection(ctx, **kwargs):
 
     ctx.obj = ctx.obj or {}
     ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
 
-    datasource_list = kwargs['datasources'].split(',')
+    datasource_list = kwargs["datasources"].split(",")
 
     task = TestConnectionTask(ctx.obj["profile"], ctx.obj["project"], datasource_list)
     task.execute()
@@ -72,7 +72,7 @@ def test_connection(ctx, **kwargs):
 def scan(ctx, **kwargs):
     """Scans data sources"""
 
-    if 'datasources' not in kwargs:
+    if "datasources" not in kwargs:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: scan"
         )
@@ -88,10 +88,10 @@ def scan(ctx, **kwargs):
 
     ctx.obj = ctx.obj or {}
     ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs['datasources'].split(',')
+    datasource_list = kwargs["datasources"].split(",")
 
     task = ScanTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
     task.execute()
@@ -107,7 +107,7 @@ def scan(ctx, **kwargs):
 def profile(ctx, **kwargs):
     """Scans data sources"""
 
-    if 'datasources' not in kwargs:
+    if "datasources" not in kwargs:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: profile"
         )
@@ -123,10 +123,10 @@ def profile(ctx, **kwargs):
 
     ctx.obj = ctx.obj or {}
     ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs['datasources'].split(',')
+    datasource_list = kwargs["datasources"].split(",")
 
     task = ProfileTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
     task.execute()
@@ -143,7 +143,7 @@ def profile(ctx, **kwargs):
 def compare_data(ctx, **kwargs):
     """Compares two data entities"""
 
-    if 'datasources' not in kwargs:
+    if "datasources" not in kwargs:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: compare-data"
         )
@@ -161,17 +161,17 @@ def compare_data(ctx, **kwargs):
 
     ctx.obj = ctx.obj or {}
     ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj['project']['name']]
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs['datasources'].split(',')
+    datasource_list = kwargs["datasources"].split(",")
 
     task = CompareDataTask(
         profile=ctx.obj["profile"],
         project=ctx.obj["project"],
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
-        sample_count=kwargs['sample_count']
+        sample_count=kwargs["sample_count"],
     )
     task.execute()
 

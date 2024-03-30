@@ -9,22 +9,21 @@ from tulona.exceptions import TulonaNotImplementedError
 
 log = logging.getLogger(__name__)
 
+
 @dataclass
 class ConnectionManager(BaseConnectionManager):
     def get_engine(self):
-        dbtype = self.conn_profile['type'].lower()
-        if dbtype == 'snowflake':
+        dbtype = self.conn_profile["type"].lower()
+        if dbtype == "snowflake":
             self.engine = get_snowflake_engine(self.conn_profile)
-        elif dbtype == 'mssql':
+        elif dbtype == "mssql":
             self.engine = get_mssql_engine(self.conn_profile)
-        elif dbtype == 'postgres':
+        elif dbtype == "postgres":
             self.engine = get_postgres_engine(self.conn_profile)
-        elif dbtype == 'mysql':
+        elif dbtype == "mysql":
             self.engine = get_mysql_engine(self.conn_profile)
         else:
-            raise TulonaNotImplementedError(
-                f"Tulona connection manager is not set up for {dbtype}"
-            )
+            raise TulonaNotImplementedError(f"Tulona connection manager is not set up for {dbtype}")
 
     def open(self):
         self.get_engine()

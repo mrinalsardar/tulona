@@ -15,22 +15,20 @@ def highlight_mismatch_pair(excel_file, sheet):
     ws = wb[sheet]
 
     yellow_fill = styles.PatternFill(
-        start_color='FFFFFF00',
-        end_color='FFFFFF00',
-        fill_type='solid'
+        start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid"
     )
 
     left_border = Border(
-        left=Side(border_style='thick'),
-        right=Side(border_style='thin'),
-        top=Side(border_style='thick'),
-        bottom=Side(border_style='thick')
+        left=Side(border_style="thick"),
+        right=Side(border_style="thin"),
+        top=Side(border_style="thick"),
+        bottom=Side(border_style="thick"),
     )
     right_border = Border(
-        left=Side(border_style='thin'),
-        right=Side(border_style='thick'),
-        top=Side(border_style='thick'),
-        bottom=Side(border_style='thick')
+        left=Side(border_style="thin"),
+        right=Side(border_style="thick"),
+        top=Side(border_style="thick"),
+        bottom=Side(border_style="thick"),
     )
 
     for row in ws.iter_rows(min_row=2, min_col=0, max_row=ws.max_row, max_col=ws.max_column):
