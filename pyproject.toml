@@ -73,3 +73,23 @@ exclude = '''
   )/
 )
 '''
+
+[tool.coverage.run]
+branch = true
+source = ["core"]
+
+[tool.coverage.report]
+exclude_also = [
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "raise TulonaNotImplementedError",
+  "raise TulonaProjectException",
+  "raise TulonaInvalidProjectConfigError",
+  "raise TulonaUnSupportedExecEngine",
+  "raise TulonaProfileException",
+  "raise TulonaInvalidProfileConfigError",
+  "raise TulonaMissingPropertyError",
+  "raise TulonaMissingArgumentError",
+  "raise TulonaMissingPrimaryKeyError",
+  "raise TulonaFundamentalError",
+]

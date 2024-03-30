@@ -1,4 +1,5 @@
 [flake8]
+include = core/tulona/
 select =
     E
     W
@@ -6,4 +7,4 @@ select =
 ignore =
     W503
     E501
-exclude = test/
+exclude = tests/
