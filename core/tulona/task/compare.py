@@ -15,8 +15,11 @@ from tulona.util.excel import highlight_mismatch_pair
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.project import extract_table_name_from_config
-from tulona.util.sql import (build_filter_query_expression,
-                             get_query_output_as_df, get_sample_row_query)
+from tulona.util.sql import (
+    build_filter_query_expression,
+    get_query_output_as_df,
+    get_sample_row_query,
+)
 
 log = logging.getLogger(__name__)
 

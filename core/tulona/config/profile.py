@@ -1,8 +1,7 @@
 import logging
 from pathlib import Path
 
-from tulona.exceptions import (TulonaInvalidProfileConfigError,
-                               TulonaProfileException)
+from tulona.exceptions import TulonaInvalidProfileConfigError, TulonaProfileException
 from tulona.util.filesystem import path_exists
 from tulona.util.yaml_parser import read_yaml
 
