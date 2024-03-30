@@ -7,9 +7,9 @@ from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
-from tulona.task.compare import CompareDataTask
-from tulona.task.profile import ProfileTask
-from tulona.task.scan import ScanTask
+from tulona.task.compare import CompareDataTask, CompareColumnTask
+# from tulona.task.profile import ProfileTask
+# from tulona.task.scan import ScanTask
 from tulona.task.test_connection import TestConnectionTask
 
 log = logging.getLogger(__name__)
@@ -18,6 +18,8 @@ logging.basicConfig(
     format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
 
+# TODO: Make use of command line arguments like exec_engine, outdir etc.
+# to override project config values.
 
 # command: tulona
 @click.group(
@@ -27,7 +29,7 @@ logging.basicConfig(
 )
 @click.pass_context
 def cli(ctx):
-    """Tulona compares databases to find out differences"""
+    """Tulona compares data sources to find out differences"""
 
 
 # command: tulona test-connection
@@ -38,7 +40,7 @@ def cli(ctx):
 @p.verbose
 @p.datasources
 def test_connection(ctx, **kwargs):
-    """Scans data sources"""
+    """Test connectivity to datasources"""
 
     if "datasources" not in kwargs:
         raise TulonaMissingArgumentError(
@@ -64,77 +66,77 @@ def test_connection(ctx, **kwargs):
     task.execute()
 
 
-# command: tulona scan
-@cli.command("scan")
-@click.pass_context
-@p.exec_engine
-@p.outdir
-@p.verbose
-@p.datasources
-def scan(ctx, **kwargs):
-    """Scans data sources"""
+# # command: tulona scan
+# @cli.command("scan")
+# @click.pass_context
+# @p.exec_engine
+# @p.outdir
+# @p.verbose
+# @p.datasources
+# def scan(ctx, **kwargs):
+#     """Scans data sources for schemas, tables, columns etc."""
 
-    if "datasources" not in kwargs:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: scan"
-        )
+#     if "datasources" not in kwargs:
+#         raise TulonaMissingArgumentError(
+#             "--datasources argument must be provided with command: scan"
+#         )
 
-    if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+#     if kwargs["verbose"]:
+#         # TODO: Fix me
+#         # This setting doesn't enable debug level logging
+#         handler = logging.StreamHandler()
+#         handler.setLevel(logging.DEBUG)
 
-    prof = Profile()
-    proj = Project()
+#     prof = Profile()
+#     proj = Project()
 
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+#     ctx.obj = ctx.obj or {}
+#     ctx.obj["project"] = proj.load_project_config()
+#     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+#     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs["datasources"].split(",")
+#     datasource_list = kwargs["datasources"].split(",")
 
-    task = ScanTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
-    task.execute()
-
-
-# command: tulona profile
-@cli.command("profile")
-@click.pass_context
-@p.exec_engine
-@p.outdir
-@p.verbose
-@p.datasources
-def profile(ctx, **kwargs):
-    """Scans data sources"""
-
-    if "datasources" not in kwargs:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: profile"
-        )
-
-    if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-    datasource_list = kwargs["datasources"].split(",")
-
-    task = ProfileTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
-    task.execute()
+#     task = ScanTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
+#     task.execute()
 
 
-# command: tulona compare
+# # command: tulona profile
+# @cli.command("profile")
+# @click.pass_context
+# @p.exec_engine
+# @p.outdir
+# @p.verbose
+# @p.datasources
+# def profile(ctx, **kwargs):
+#     """Profile data sources to collect metadata [row count, column min/max/mean etc.]"""
+
+#     if "datasources" not in kwargs:
+#         raise TulonaMissingArgumentError(
+#             "--datasources argument must be provided with command: profile"
+#         )
+
+#     if kwargs["verbose"]:
+#         # TODO: Fix me
+#         # This setting doesn't enable debug level logging
+#         handler = logging.StreamHandler()
+#         handler.setLevel(logging.DEBUG)
+
+#     prof = Profile()
+#     proj = Project()
+
+#     ctx.obj = ctx.obj or {}
+#     ctx.obj["project"] = proj.load_project_config()
+#     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+#     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+
+#     datasource_list = kwargs["datasources"].split(",")
+
+#     task = ProfileTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
+#     task.execute()
+
+
+# command: tulona compare-data
 @cli.command("compare-data")
 @click.pass_context
 @p.exec_engine
@@ -174,6 +176,56 @@ def compare_data(ctx, **kwargs):
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
         sample_count=kwargs["sample_count"],
+    )
+    task.execute()
+
+
+# command: tulona compare-column
+@cli.command("compare-column")
+@click.pass_context
+@p.exec_engine
+@p.outdir
+@p.verbose
+@p.datasources
+def compare_column(ctx, **kwargs):
+    """
+    Compares columns from two tables, generally primary keys.
+    Columns to compare can be specified with --datasources
+    argument in one of the following formats (column name is same for option 3 and 4):-
+    1. <datasource1>:<col1>,<datasource2>:<col2>
+    2. <datasource1>:<col>,<datasource2>:<col>
+    3. <datasource1>:<col>,<datasource2>
+    4. <datasource1>,<datasource2>:<col>
+    """
+
+    if "datasources" not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: compare-column"
+        )
+
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
+        )
+
+    prof = Profile()
+    proj = Project()
+
+    ctx.obj = ctx.obj or {}
+    ctx.obj["project"] = proj.load_project_config()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+
+    datasource_list = kwargs["datasources"].split(",")
+
+    task = CompareColumnTask(
+        profile=ctx.obj["profile"],
+        project=ctx.obj["project"],
+        runtime=ctx.obj["runtime"],
+        datasources=datasource_list,
     )
     task.execute()
 

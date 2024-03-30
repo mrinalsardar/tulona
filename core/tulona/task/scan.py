@@ -35,7 +35,5 @@ class ScanTask(BaseTask):
                 log.error(f"Connection to data source {ds} failed because of: {exp}")
 
         end_time = time.time()
-
-        end_time = time.time()
         log.info("Finished task: Scan")
-        log.info(f"Total time taken: {end_time - start_time} seconds")
+        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")

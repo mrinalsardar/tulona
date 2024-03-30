@@ -11,14 +11,29 @@ def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
         query = f"select * from {table_name} tablesample ({sample_count} rows)"
     elif dbtype == "postgres":
         # TODO: system_rows method not implemented, tablesample works for percentage selection
-        # query = f"select * from {table_name} tablesample system_rows({sample_count});"
-        query = f"select * from {table_name} limit {sample_count};"
+        # query = f"select * from {table_name} tablesample system_rows({sample_count})"
+        query = f"select * from {table_name} limit {sample_count}"
     elif dbtype == "mysql":
-        # mysql doesn't have schema
         query = f"select * from {table_name} limit {sample_count}"
     else:
         raise TulonaNotImplementedError(
             f"Extracting sample rows from source type {dbtype} is not implemented."
+        )
+
+    return query
+
+
+def get_column_query(dbtype: str, table_name: str, column: str):
+    dbtype = dbtype.lower()
+
+    if dbtype in ["snowflake", "mssql", "mysql"]:
+        query = f"select {column} from {table_name}"
+    elif dbtype == "postgres":
+        # TODO: double quote check
+        query = f"""select "{column}" from {table_name}"""
+    else:
+        raise TulonaNotImplementedError(
+            f"Extracting column data from source type {dbtype} is not implemented."
         )
 
     return query
