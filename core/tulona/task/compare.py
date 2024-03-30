@@ -91,7 +91,7 @@ class CompareDataTask(BaseTask):
 
         # Extract rows from both data sources
         log.debug("Extracting common data from both tables")
-        if 'unique_key' in ds_dict1 and 'unique_key' in ds_dict2:
+        if 'primary_key' in ds_dict1 and 'primary_key' in ds_dict2:
             i = 0
             while i < 10:
                 log.debug(f"Extraction iteration: {i+1}")
@@ -102,25 +102,25 @@ class CompareDataTask(BaseTask):
 
                 df1 = df1.rename(columns={c:c.lower() for c in df1.columns})
 
-                if ds_dict1['unique_key'] not in df1.columns.tolist():
+                if ds_dict1['primary_key'] not in df1.columns.tolist():
                     raise ValueError(
-                        f"Unique key {ds_dict1['unique_key']} not present in {table_name1}"
+                        f"Primary key {ds_dict1['primary_key']} not present in {table_name1}"
                     )
 
                 df2 = self.get_table_data(
                     datasource=datasource2,
-                    query_expr=build_filter_query_expression(df1, ds_dict1['unique_key'])
+                    query_expr=build_filter_query_expression(df1, ds_dict1['primary_key'])
                 )
 
                 df2 = df2.rename(columns={c:c.lower() for c in df2.columns})
 
-                if ds_dict2['unique_key'] not in df2.columns.tolist():
+                if ds_dict2['primary_key'] not in df2.columns.tolist():
                     raise ValueError(
-                        f"Unique key {ds_dict2['unique_key']} not present in {table_name2}"
+                        f"Primary key {ds_dict2['primary_key']} not present in {table_name2}"
                     )
 
                 if df2.shape[0] > 0:
-                    df1 = df1[df1[ds_dict1['unique_key']].isin(df2[ds_dict1['unique_key']].tolist())]
+                    df1 = df1[df1[ds_dict1['primary_key']].isin(df2[ds_dict1['primary_key']].tolist())]
                     break
 
                 else:
@@ -137,13 +137,13 @@ class CompareDataTask(BaseTask):
                     f"Could not find common data between {table_name1} and {table_name2}"
                 )
         else:
-            raise NotImplementedError("Table comparison without unique keys yet to be implementd")
+            raise NotImplementedError("Table comparison without primary keys yet to be implementd")
 
         # Compare
         common_columns = list(
             set(df1.columns).intersection(set(df2.columns))
-            .union({ds_dict1['unique_key']})
-            .union({ds_dict2['unique_key']})
+            .union({ds_dict1['primary_key']})
+            .union({ds_dict2['primary_key']})
         )
         df1 = df1[common_columns].rename(
             columns={c:c+'_'+datasource1.replace('_','') for c in df1.columns}
@@ -158,8 +158,8 @@ class CompareDataTask(BaseTask):
         df_merge = pd.merge(
             left=df1 if i%2 == 0 else df2,
             right=df2 if i%2 == 0 else df1,
-            left_on=ds_dict1['unique_key'] + '_' + ds1_compressed,
-            right_on=ds_dict2['unique_key'] + '_' + ds2_compressed,
+            left_on=ds_dict1['primary_key'] + '_' + ds1_compressed,
+            right_on=ds_dict2['primary_key'] + '_' + ds2_compressed,
             validate='one_to_one'
         )
 

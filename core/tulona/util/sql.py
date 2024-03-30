@@ -26,13 +26,13 @@ def get_query_output_as_df(connection_manager, query_text: str):
         df = pd.read_sql_query(query_text, conn)
     return df
 
-def build_filter_query_expression(df: pd.DataFrame, unique_key: str):
-    unique_keys = df[unique_key].tolist()
+def build_filter_query_expression(df: pd.DataFrame, primary_key: str):
+    primary_keys = df[primary_key].tolist()
 
-    if 'int' in str(df[unique_key].dtype):
-        unique_keys = [str(k) for k in unique_keys]
-        query_expr = f"""{unique_key} in ({", ".join(unique_keys)})"""
+    if 'int' in str(df[primary_key].dtype):
+        primary_keys = [str(k) for k in primary_keys]
+        query_expr = f"""{primary_key} in ({", ".join(primary_keys)})"""
     else:
-        query_expr = f"""{unique_key} in ('{"', '".join(unique_keys)}')"""
+        query_expr = f"""{primary_key} in ('{"', '".join(primary_keys)}')"""
 
     return query_expr
