@@ -1,15 +1,11 @@
 click~=8.1
-# dask[complete]~=2023.8.1
-# python-box[all]~=7.1
 ruamel.yaml~=0.18
-# SQLAlchemy~=2.0
 psycopg2-binary~=2.9
 pymysql~=1.1
 cryptography~=42.0
 snowflake-sqlalchemy~=1.5
 pyodbc~=5.1
 pandas~=1.5 # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
-# XlsxWriter~=3.2
 openpyxl~=3.1
 Jinja2~=3.1
 pytest~=8.1
