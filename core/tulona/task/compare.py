@@ -41,16 +41,23 @@ class CompareDataTask(BaseTask):
     def __post_init__(self):
         for field in fields(self):
             # If there is a default and the value of the field is none we can assign a value
-            if not isinstance(field.default, _MISSING_TYPE) and getattr(self, field.name) is None:
+            if (
+                not isinstance(field.default, _MISSING_TYPE)
+                and getattr(self, field.name) is None
+            ):
                 setattr(self, field.name, field.default)
 
     # TODO: needs refactoring to remove duplicate some code
     def get_table_data(self, datasource, query_expr: str = None):
-        connection_profile = get_connection_profile(self.profile, self.project, datasource)
+        connection_profile = get_connection_profile(
+            self.profile, self.project, datasource
+        )
         conman = self.get_connection_manager(conn_profile=connection_profile)
 
         ds_dict = self.project["datasources"][datasource]
-        dbtype = self.profile["profiles"][extract_profile_name(self.project, datasource)]["type"]
+        dbtype = self.profile["profiles"][extract_profile_name(self.project, datasource)][
+            "type"
+        ]
         table_name = extract_table_name_from_config(config=ds_dict, dbtype=dbtype)
 
         if query_expr:
@@ -86,13 +93,19 @@ class CompareDataTask(BaseTask):
         ds_dict1 = self.project["datasources"][datasource1]
         ds_dict2 = self.project["datasources"][datasource2]
 
-        dbtype1 = self.profile["profiles"][extract_profile_name(self.project, datasource1)]["type"]
-        dbtype2 = self.profile["profiles"][extract_profile_name(self.project, datasource2)]["type"]
+        dbtype1 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource1)
+        ]["type"]
+        dbtype2 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource2)
+        ]["type"]
         table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
         table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
 
         # Extract rows from both data sources
-        log.debug(f"Trying to extract {self.sample_count} common records from both data sources")
+        log.debug(
+            f"Trying to extract {self.sample_count} common records from both data sources"
+        )
         if "primary_key" in ds_dict1 and "primary_key" in ds_dict2:
             i = 0
             while i < 10:
@@ -111,7 +124,9 @@ class CompareDataTask(BaseTask):
 
                 df2 = self.get_table_data(
                     datasource=datasource2,
-                    query_expr=build_filter_query_expression(df1, ds_dict1["primary_key"]),
+                    query_expr=build_filter_query_expression(
+                        df1, ds_dict1["primary_key"]
+                    ),
                 )
 
                 df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
@@ -123,7 +138,9 @@ class CompareDataTask(BaseTask):
 
                 if df2.shape[0] > 0:
                     df1 = df1[
-                        df1[ds_dict1["primary_key"]].isin(df2[ds_dict1["primary_key"]].tolist())
+                        df1[ds_dict1["primary_key"]].isin(
+                            df2[ds_dict1["primary_key"]].tolist()
+                        )
                     ]
                     break
 
@@ -135,8 +152,12 @@ class CompareDataTask(BaseTask):
                     dbtype2 = self.profile["profiles"][
                         extract_profile_name(self.project, datasource2)
                     ]["type"]
-                    table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
-                    table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
+                    table_name1 = extract_table_name_from_config(
+                        config=ds_dict1, dbtype=dbtype1
+                    )
+                    table_name2 = extract_table_name_from_config(
+                        config=ds_dict2, dbtype=dbtype2
+                    )
 
                 i += 1
 
@@ -145,7 +166,9 @@ class CompareDataTask(BaseTask):
                     f"Could not find common data between {table_name1} and {table_name2}"
                 )
         else:
-            raise TulonaMissingPrimaryKeyError("Primary key is required for data comparison")
+            raise TulonaMissingPrimaryKeyError(
+                "Primary key is required for data comparison"
+            )
 
         # Exclude columns
         log.debug("Excluding columns")
@@ -198,11 +221,16 @@ class CompareColumnTask(BaseTask):
     def __post_init__(self):
         for field in fields(self):
             # If there is a default and the value of the field is none we can assign a value
-            if not isinstance(field.default, _MISSING_TYPE) and getattr(self, field.name) is None:
+            if (
+                not isinstance(field.default, _MISSING_TYPE)
+                and getattr(self, field.name) is None
+            ):
                 setattr(self, field.name, field.default)
 
     def get_column_data(self, datasource, table, column):
-        connection_profile = get_connection_profile(self.profile, self.project, datasource)
+        connection_profile = get_connection_profile(
+            self.profile, self.project, datasource
+        )
         conman = self.get_connection_manager(conn_profile=connection_profile)
 
         query = get_column_query(table, column)
@@ -269,8 +297,12 @@ class CompareColumnTask(BaseTask):
         ds_dict1 = self.project["datasources"][datasource1]
         ds_dict2 = self.project["datasources"][datasource2]
 
-        dbtype1 = self.profile["profiles"][extract_profile_name(self.project, datasource1)]["type"]
-        dbtype2 = self.profile["profiles"][extract_profile_name(self.project, datasource2)]["type"]
+        dbtype1 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource1)
+        ]["type"]
+        dbtype2 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource2)
+        ]["type"]
         table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
         table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
 

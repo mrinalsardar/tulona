@@ -31,7 +31,9 @@ def highlight_mismatch_pair(excel_file, sheet):
         bottom=Side(border_style="thick"),
     )
 
-    for row in ws.iter_rows(min_row=2, min_col=0, max_row=ws.max_row, max_col=ws.max_column):
+    for row in ws.iter_rows(
+        min_row=2, min_col=0, max_row=ws.max_row, max_col=ws.max_column
+    ):
         for col_idx in range(0, ws.max_column, 2):
             if row[col_idx].value != row[col_idx + 1].value:
                 row[col_idx].fill = yellow_fill

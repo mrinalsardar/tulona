@@ -57,7 +57,7 @@ where = ["core/"]
 include = ["tulona", "tulona.*"]
 
 [tool.black]
-line-length = 100
+line-length = 90
 target_version = ["py38", "py39", "py310", "py311"]
 exclude = '''
 
@@ -93,3 +93,8 @@ exclude_also = [
   "raise TulonaMissingPrimaryKeyError",
   "raise TulonaFundamentalError",
 ]
+
+[tool.isort]
+profile = "black"
+line_length = 90
+skip = [".gitignore"]

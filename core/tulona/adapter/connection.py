@@ -24,7 +24,9 @@ class ConnectionManager(BaseConnectionManager):
         elif dbtype == "mysql":
             self.engine = get_mysql_engine(self.conn_profile)
         else:
-            raise TulonaNotImplementedError(f"Tulona connection manager is not set up for {dbtype}")
+            raise TulonaNotImplementedError(
+                f"Tulona connection manager is not set up for {dbtype}"
+            )
 
     def open(self):
         self.get_engine()
