@@ -48,7 +48,3 @@ def build_filter_query_expression(df: pd.DataFrame, primary_key: str):
         query_expr = f"""{primary_key} in ('{"', '".join(primary_keys)}')"""
 
     return query_expr
-
-
-def get_column_info():
-    query = "select * from information_schema.columns where table_schema = 'public' and table_name = 'employee'"
