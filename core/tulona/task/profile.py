@@ -1,11 +1,16 @@
 import logging
 import time
-from dataclasses import dataclass
-from typing import Dict, List
+import pandas as pd
+from dataclasses import dataclass, fields, _MISSING_TYPE
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
-from tulona.util.profiles import get_connection_profile
+from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.profiles import extract_profile_name, get_connection_profile
+from tulona.util.sql import get_query_output_as_df
 
 log = logging.getLogger(__name__)
 
@@ -16,25 +21,111 @@ class ProfileTask(BaseTask):
     project: Dict
     runtime: RunConfig
     datasources: List[str]
+    compare: bool = False
+
+    # Support for default values
+    def __post_init__(self):
+        for field in fields(self):
+            # If there is a default and the value of the field is none we can assign a value
+            if (
+                not isinstance(field.default, _MISSING_TYPE)
+                and getattr(self, field.name) is None
+            ):
+                setattr(self, field.name, field.default)
+
+
+    def get_column_info(self, conman, database, schema, table):
+        if database:
+            query = f"""
+            select * from information_schema.columns
+            where table_catalog = '{database}'
+            and table_schema = '{schema}'
+            and table_name = '{table}'
+            """
+        else:
+            query = f"""
+            select * from information_schema.columns
+            where table_schema = '{schema}'
+            and table_name = '{table}'
+            """
+        log.debug(f"Executing query: {query}")
+        df = get_query_output_as_df(connection_manager=conman, query_text=query)
+
+        return df
+
+
+    def write_result(self, data: Union[pd.DataFrame, list[pd.DataFrame]], ds_list: list):
+        outdir = create_dir_if_not_exist(self.project["outdir"])
+        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
+        outfile_fqn = Path(outdir, outfile)
+        log.debug(f"Writing output into: {outfile_fqn}")
+
+        if isinstance(data, pd.DataFrame):
+            data.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
+        elif isinstance(data, list[pd.DataFrame]):
+            with pd.ExcelWriter(outfile_fqn) as writer:
+                for ds_name, df in zip(ds_list, data):
+                    df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
+        else:
+            raise ValueError("Unsupported data could not be written into an Excel file")
+
 
     def execute(self):
 
         log.info("Starting task: profiling")
         start_time = time.time()
 
-        # TODO: Change the implementation
-        for ds in self.datasources:
-            log.debug(f"Testing connection to data source: {ds}")
+        df_collection = []
+        ds_name_compressed_list = []
+        for ds_name in self.datasources:
+            # Extract data source name from datasource:column combination
+            ds_name = ds_name.split(":")[0]
+            ds_name_compressed = ds_name.replace("_", '')
+            ds_name_compressed_list.append(ds_name_compressed)
+            log.debug(f"Extracting metadata for {ds_name}")
 
-            connection_profile = get_connection_profile(self.profile, self.project, ds)
-            try:
-                conman = self.get_connection_manager(conn_profile=connection_profile)
-                with conman.engine.open() as connection:
-                    results = connection.execute(
-                        "select * from information_schema"
-                    ).fetchone()
-            except Exception as exp:
-                log.error(f"Connection to data source {ds} failed because of: {exp}")
+            ds_config = self.project["datasources"][ds_name]
+            dbtype = self.profile["profiles"][extract_profile_name(self.project, ds_name)]["type"]
+
+            # MySQL doesn't have logical database
+            if "database" in ds_config and dbtype.lower() != "mysql":
+                database = ds_config["database"]
+            else:
+                database = None
+            schema = ds_config["schema"]
+            table = ds_config["table"]
+
+            connection_profile = get_connection_profile(
+                self.profile, self.project, ds_name
+            )
+            conman = self.get_connection_manager(conn_profile=connection_profile)
+
+            df = self.get_column_info(conman, database, schema, table)
+            df = df.rename(
+                columns={
+                    c: (
+                        f"{c.lower()}_{ds_name_compressed}" if c.lower() != "column_name" else c.lower()
+                    )
+                    for c in df.columns
+                }
+            )
+            df_collection.append(df)
+
+        if self.compare:
+            log.debug("Preparing metadata comparison")
+            df_merge = df_collection.pop()
+            for df in df_collection:
+                df_merge = pd.merge(
+                    left=df_merge,
+                    right=df,
+                    on="column_name",
+                    how="inner"
+                )
+            df_merge = df_merge[sorted(df_merge.columns.tolist())]
+            self.write_result(data=df_merge, ds_list=ds_name_compressed_list)
+        else:
+            self.write_result(data=df_collection, ds_list=ds_name_compressed_list)
 
         end_time = time.time()
         log.info("Finished task: profiling")

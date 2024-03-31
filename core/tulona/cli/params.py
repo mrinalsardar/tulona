@@ -20,3 +20,9 @@ datasources = click.option(
 sample_count = click.option(
     "--sample-count", help="Number of maximum records to be compared"
 )
+
+compare = click.option(
+    "--compare",
+    is_flag=True,
+    help="Can be used with profile task to compare profiles of different data sources"
+)

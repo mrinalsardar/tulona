@@ -81,6 +81,7 @@ Sample tulona-project.yml
       primary_key: employee_id
       exclude_columns:
         - name
+      compare_column: Employee_ID
     mysql_db_db_employee:
       connection_profile: mydb
       database: db
@@ -89,6 +90,7 @@ Sample tulona-project.yml
       primary_key: employee_id
       exclude_columns:
         - phone_number
+      compare_column: Employee_ID
 
 
 .. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml/badge.svg

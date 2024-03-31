@@ -8,8 +8,7 @@ from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
 from tulona.task.compare import CompareColumnTask, CompareDataTask
-
-# from tulona.task.profile import ProfileTask
+from tulona.task.profile import ProfileTask
 # from tulona.task.scan import ScanTask
 from tulona.task.test_connection import TestConnectionTask
 
@@ -103,39 +102,46 @@ def test_connection(ctx, **kwargs):
 #     task.execute()
 
 
-# # command: tulona profile
-# @cli.command("profile")
-# @click.pass_context
-# @p.exec_engine
-# @p.outdir
-# @p.verbose
-# @p.datasources
-# def profile(ctx, **kwargs):
-#     """Profile data sources to collect metadata [row count, column min/max/mean etc.]"""
+# command: tulona profile
+@cli.command("profile")
+@click.pass_context
+@p.exec_engine
+@p.outdir
+@p.verbose
+@p.datasources
+@p.compare
+def profile(ctx, **kwargs):
+    """Profile data sources to collect metadata [row count, column min/max/mean etc.]"""
 
-#     if "datasources" not in kwargs:
-#         raise TulonaMissingArgumentError(
-#             "--datasources argument must be provided with command: profile"
-#         )
+    if "datasources" not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: profile"
+        )
 
-#     if kwargs["verbose"]:
-#         # TODO: Fix me
-#         # This setting doesn't enable debug level logging
-#         handler = logging.StreamHandler()
-#         handler.setLevel(logging.DEBUG)
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
 
-#     prof = Profile()
-#     proj = Project()
+    prof = Profile()
+    proj = Project()
 
-#     ctx.obj = ctx.obj or {}
-#     ctx.obj["project"] = proj.load_project_config()
-#     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-#     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+    ctx.obj = ctx.obj or {}
+    ctx.obj["project"] = proj.load_project_config()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-#     datasource_list = kwargs["datasources"].split(",")
+    datasource_list = kwargs["datasources"].split(",")
 
-#     task = ProfileTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
-#     task.execute()
+    task = ProfileTask(
+        ctx.obj["profile"],
+        ctx.obj["project"],
+        ctx.obj["runtime"],
+        datasource_list,
+        compare='compare' in kwargs
+    )
+    task.execute()
 
 
 # command: tulona compare-data
