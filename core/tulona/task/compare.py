@@ -217,15 +217,6 @@ class CompareColumnTask(BaseTask):
     runtime: RunConfig
     datasources: List[str]
 
-    # Support for default values
-    def __post_init__(self):
-        for field in fields(self):
-            # If there is a default and the value of the field is none we can assign a value
-            if (
-                not isinstance(field.default, _MISSING_TYPE)
-                and getattr(self, field.name) is None
-            ):
-                setattr(self, field.name, field.default)
 
     def get_column_data(self, datasource, table, column):
         connection_profile = get_connection_profile(
