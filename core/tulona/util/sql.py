@@ -23,18 +23,11 @@ def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
     return query
 
 
-def get_column_query(dbtype: str, table_name: str, column: str):
-    dbtype = dbtype.lower()
-
-    if dbtype in ["snowflake", "mssql", "mysql"]:
-        query = f"select {column} from {table_name}"
-    elif dbtype == "postgres":
-        # TODO: double quote check
+def get_column_query(table_name: str, column: str, quoted=False):
+    if quoted:
         query = f"""select "{column}" from {table_name}"""
     else:
-        raise TulonaNotImplementedError(
-            f"Extracting column data from source type {dbtype} is not implemented."
-        )
+        query = f"""select {column} from {table_name}"""
 
     return query
 

@@ -204,9 +204,16 @@ class CompareColumnTask(BaseTask):
     def get_column_data(self, datasource, table, column):
         connection_profile = get_connection_profile(self.profile, self.project, datasource)
         conman = self.get_connection_manager(conn_profile=connection_profile)
-        dbtype = self.profile["profiles"][extract_profile_name(self.project, datasource)]["type"]
-        query = get_column_query(dbtype, table, column)
-        df = get_query_output_as_df(connection_manager=conman, query_text=query)
+
+        query = get_column_query(table, column)
+        try:
+            log.debug(f"Trying unquoted column name: {column}")
+            df = get_query_output_as_df(connection_manager=conman, query_text=query)
+        except Exception as exp:
+            log.debug(f"Failed with error: {exp}")
+            log.debug(f'Trying quoted column name: "{column}"')
+            query = get_column_query(table, column, quoted=True)
+            df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
 
     def write_result(self, df, ds1, ds2):
@@ -267,7 +274,9 @@ class CompareColumnTask(BaseTask):
         table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
         table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
 
+        log.debug(f"Extracting data from table: {table_name1}")
         df1 = self.get_column_data(datasource1, table_name1, column1)
+        log.debug(f"Extracting data from table: {table_name2}")
         df2 = self.get_column_data(datasource2, table_name2, column2)
 
         df1 = df1.rename(columns={c: c.lower() for c in df2.columns})
