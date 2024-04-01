@@ -112,29 +112,29 @@ class CompareDataTask(BaseTask):
 
                 df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
 
-                if ds_dict1["primary_key"] not in df1.columns.tolist():
+                if ds_dict1["primary_key"].lower() not in df1.columns.tolist():
                     raise ValueError(
-                        f"Primary key {ds_dict1['primary_key']} not present in {table_name1}"
+                        f"Primary key {ds_dict1['primary_key'].lower()} not present in {table_name1}"
                     )
 
                 df2 = self.get_table_data(
                     datasource=datasource2,
                     query_expr=build_filter_query_expression(
-                        df1, ds_dict1["primary_key"]
+                        df1, ds_dict1["primary_key"].lower()
                     ),
                 )
 
                 df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
 
-                if ds_dict2["primary_key"] not in df2.columns.tolist():
+                if ds_dict2["primary_key"].lower() not in df2.columns.tolist():
                     raise ValueError(
-                        f"Primary key {ds_dict2['primary_key']} not present in {table_name2}"
+                        f"Primary key {ds_dict2['primary_key'].lower()} not present in {table_name2}"
                     )
 
                 if df2.shape[0] > 0:
                     df1 = df1[
-                        df1[ds_dict1["primary_key"]].isin(
-                            df2[ds_dict1["primary_key"]].tolist()
+                        df1[ds_dict1["primary_key"].lower()].isin(
+                            df2[ds_dict1["primary_key"].lower()].tolist()
                         )
                     ]
                     break
@@ -174,8 +174,8 @@ class CompareDataTask(BaseTask):
         common_columns = list(
             set(df1.columns)
             .intersection(set(df2.columns))
-            .union({ds_dict1["primary_key"]})
-            .union({ds_dict2["primary_key"]})
+            .union({ds_dict1["primary_key"].lower()})
+            .union({ds_dict2["primary_key"].lower()})
         )
         df1 = df1[common_columns].rename(
             columns={c: c + "_" + datasource1.replace("_", "") for c in df1.columns}
@@ -190,8 +190,8 @@ class CompareDataTask(BaseTask):
         df_merge = pd.merge(
             left=df1 if i % 2 == 0 else df2,
             right=df2 if i % 2 == 0 else df1,
-            left_on=ds_dict1["primary_key"] + "_" + ds1_compressed,
-            right_on=ds_dict2["primary_key"] + "_" + ds2_compressed,
+            left_on=ds_dict1["primary_key"].lower() + "_" + ds1_compressed,
+            right_on=ds_dict2["primary_key"].lower() + "_" + ds2_compressed,
             validate="one_to_one",
         )
 
@@ -202,7 +202,6 @@ class CompareDataTask(BaseTask):
         df_merge.to_excel(outfile_fqn, sheet_name="Data Comparison", index=False)
 
         log.debug("Highlighting mismtach pairs")
-        # highlight_mismatch_pair(excel_file=outfile_fqn, sheet="Data Comparison")
         highlight_mismatch_cells(
             excel_file=outfile_fqn, sheet="Data Comparison", num_ds=len(self.datasources)
         )
@@ -320,6 +319,7 @@ class CompareColumnTask(BaseTask):
             validate="one_to_one",
             indicator="presence",
         )
+        df_merge = df_merge[df_merge["presence"] != "both"]
 
         log.debug("Writing comparison result")
         self.write_result(df_merge, ds1_compressed, ds2_compressed)
