@@ -1,0 +1,10 @@
+[flake8]
+include = core/tulona/
+select =
+    E
+    W
+    F
+ignore =
+    W503
+    E501
+exclude = tests/

@@ -1,282 +1,329 @@
 import logging
-import dask.dataframe as ddf
-from dataclasses import dataclass
-import pandas as pd
+import time
+from dataclasses import _MISSING_TYPE, dataclass, fields
+from datetime import datetime
 from pathlib import Path
-from tulona.task.base import BaseTask
-from tulona.adapter.connection import ConnectionManager
-from tulona.util.database import (
-    get_schemas_from_db,
-    get_table_primary_keys,
-    get_tables_from_schema,
-    get_tables_from_db
-)
-from tulona.exceptions import (
-    TulonaUnSupportedExecEngine
-)
-from tulona.util.filesystem import get_result_dir
-from typing import Dict
+from typing import Dict, List
 
+import pandas as pd
+
+from tulona.config.runtime import RunConfig
+from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
+from tulona.task.base import BaseTask
+from tulona.util.dataframe import apply_column_exclusion
+from tulona.util.excel import highlight_mismatch_cells
+from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.profiles import extract_profile_name, get_connection_profile
+from tulona.util.project import extract_table_name_from_config
+from tulona.util.sql import (
+    build_filter_query_expression,
+    get_column_query,
+    get_query_output_as_df,
+    get_sample_row_query,
+)
 
 log = logging.getLogger(__name__)
 
-
-RESTULT_LOCATIONS = {
-    "result_dir": "results",
-    "metadiff_dir": "metadata",
-    "result_meta_outfile": "result_metadata.csv",
-    "datadiff_dir": "datadiff",
-}
-
-DEFAULT_DATABASE = {
-    "postgres": 'public',
-    "mysql": 'mydb',
+DEFAULT_VALUES = {
+    "sample_count": 20,
 }
 
 
 @dataclass
-class CompareTask(BaseTask):
-    eligible_conn_profiles: list
-    runtime: Dict[str, str]
+class CompareDataTask(BaseTask):
+    profile: Dict
+    project: Dict
+    runtime: RunConfig
+    datasources: List[str]
+    sample_count: int = DEFAULT_VALUES["sample_count"]
 
-    def get_connections(self, profiles: list[Dict]) -> list:
-        connections = []
-        for prof in profiles:
-            conman = ConnectionManager(
-                host=prof['host'],
-                username=prof['username'],
-                port=prof['port'],
-                password=prof['password'],
-                database=prof['database'],
-                dbtype=prof['type']
-            )
-            conman.open()
+    # Support for default values
+    def __post_init__(self):
+        for field in fields(self):
+            # If there is a default and the value of the field is none we can assign a value
+            if (
+                not isinstance(field.default, _MISSING_TYPE)
+                and getattr(self, field.name) is None
+            ):
+                setattr(self, field.name, field.default)
 
-            connections.append(conman)
-
-        return connections
-
-
-    def prepare_rows_pandas(self, df: pd.DataFrame, tulona_id_col: str) -> pd.DataFrame:
-        # return pd.DataFrame(pd.util.hash_pandas_object(obj=df, index=False))
-
-        # TODO: handle timestamp columns - convert them to a standard format
-        # df[tulona_id_col] = pd.Series(df.fillna('').values.tolist()).str.join('|||')
-        df = pd.DataFrame(
-            data=pd.Series(
-                df.fillna('').values.tolist()).map(lambda x: '|||'.join(map(str,x))
-            ),
-            columns=['concatenated_record']
+    # TODO: needs refactoring to remove duplicate some code
+    def get_table_data(self, datasource, query_expr: str = None):
+        connection_profile = get_connection_profile(
+            self.profile, self.project, datasource
         )
-        df[tulona_id_col] = pd.util.hash_pandas_object(obj=df, index=False)
+        conman = self.get_connection_manager(conn_profile=connection_profile)
+
+        ds_dict = self.project["datasources"][datasource]
+        dbtype = self.profile["profiles"][extract_profile_name(self.project, datasource)][
+            "type"
+        ]
+        table_name = extract_table_name_from_config(config=ds_dict, dbtype=dbtype)
+
+        if query_expr:
+            query = f"select * from {table_name} where {query_expr}"
+        else:
+            query = get_sample_row_query(
+                dbtype=dbtype, table_name=table_name, sample_count=self.sample_count
+            )
+
+        df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
 
+    def get_outfile_fqn(self, ds_list):
+        outdir = create_dir_if_not_exist(self.project["outdir"])
+        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        outfile = f"{'_'.join(ds_list)}_data_comparison_{out_timestamp}.xlsx"
+        outfile_fqn = Path(outdir, outfile)
+        return outfile_fqn
 
-    def compare_tables_pandas(self, connections, schema1, schema2, tab1, tab2=None, primary_key=[]):
-        tab2 = tab2 if tab2 else tab1
-        tulona_id_col = "tulona_row_id"
+    def execute(self):
+        log.info("Starting task: Compare")
+        start_time = time.time()
 
-        df1 = pd.read_sql_table(table_name=tab1, con=connections[0].conn)
-        df2 = pd.read_sql_table(table_name=tab2, con=connections[1].conn)
+        if len(self.datasources) != 2:
+            raise ValueError("Comparison works between two entities, not more, not less.")
 
-        # ---------> Level 1: match the hashes of whole row
-        df1 = self.prepare_rows_pandas(df1, tulona_id_col=tulona_id_col)
-        df2 = self.prepare_rows_pandas(df2, tulona_id_col=tulona_id_col)
+        datasource1, datasource2 = self.datasources
+        ds_dict1 = self.project["datasources"][datasource1]
+        ds_dict2 = self.project["datasources"][datasource2]
+
+        dbtype1 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource1)
+        ]["type"]
+        dbtype2 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource2)
+        ]["type"]
+        table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
+        table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
+
+        # Extract rows from both data sources
+        log.debug(
+            f"Trying to extract {self.sample_count} common records from both data sources"
+        )
+        if "primary_key" in ds_dict1 and "primary_key" in ds_dict2:
+            i = 0
+            while i < 10:
+                log.debug(f"Extraction iteration: {i + 1}")
+
+                df1 = self.get_table_data(datasource=datasource1)
+                if df1.shape[0] == 0:
+                    raise ValueError(f"Table {table_name1} doesn't have any data")
+
+                df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
+
+                if ds_dict1["primary_key"].lower() not in df1.columns.tolist():
+                    raise ValueError(
+                        f"Primary key {ds_dict1['primary_key'].lower()} not present in {table_name1}"
+                    )
+
+                df2 = self.get_table_data(
+                    datasource=datasource2,
+                    query_expr=build_filter_query_expression(
+                        df1, ds_dict1["primary_key"].lower()
+                    ),
+                )
+
+                df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
+
+                if ds_dict2["primary_key"].lower() not in df2.columns.tolist():
+                    raise ValueError(
+                        f"Primary key {ds_dict2['primary_key'].lower()} not present in {table_name2}"
+                    )
+
+                if df2.shape[0] > 0:
+                    df1 = df1[
+                        df1[ds_dict1["primary_key"].lower()].isin(
+                            df2[ds_dict1["primary_key"].lower()].tolist()
+                        )
+                    ]
+                    break
+
+                else:
+                    datasource2, datasource1 = self.datasources
+                    dbtype1 = self.profile["profiles"][
+                        extract_profile_name(self.project, datasource1)
+                    ]["type"]
+                    dbtype2 = self.profile["profiles"][
+                        extract_profile_name(self.project, datasource2)
+                    ]["type"]
+                    table_name1 = extract_table_name_from_config(
+                        config=ds_dict1, dbtype=dbtype1
+                    )
+                    table_name2 = extract_table_name_from_config(
+                        config=ds_dict2, dbtype=dbtype2
+                    )
+
+                i += 1
+
+            if df1.shape[0] == 0:
+                raise ValueError(
+                    f"Could not find common data between {table_name1} and {table_name2}"
+                )
+        else:
+            raise TulonaMissingPrimaryKeyError(
+                "Primary key is required for data comparison"
+            )
+
+        # Exclude columns
+        log.debug("Excluding columns")
+        df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
+        df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
+
+        # Compare
+        common_columns = list(
+            set(df1.columns)
+            .intersection(set(df2.columns))
+            .union({ds_dict1["primary_key"].lower()})
+            .union({ds_dict2["primary_key"].lower()})
+        )
+        df1 = df1[common_columns].rename(
+            columns={c: c + "_" + datasource1.replace("_", "") for c in df1.columns}
+        )
+        df2 = df2[common_columns].rename(
+            columns={c: c + "_" + datasource2.replace("_", "") for c in df2.columns}
+        )
+
+        ds1_compressed = datasource1.replace("_", "")
+        ds2_compressed = datasource2.replace("_", "")
+
+        df_merge = pd.merge(
+            left=df1 if i % 2 == 0 else df2,
+            right=df2 if i % 2 == 0 else df1,
+            left_on=ds_dict1["primary_key"].lower() + "_" + ds1_compressed,
+            right_on=ds_dict2["primary_key"].lower() + "_" + ds2_compressed,
+            validate="one_to_one",
+        )
+
+        df_merge = df_merge[sorted(df_merge.columns.tolist())]
+
+        outfile_fqn = self.get_outfile_fqn([ds1_compressed, ds2_compressed])
+        log.debug("Writing comparison result into: {outfile_fqn}")
+        df_merge.to_excel(outfile_fqn, sheet_name="Data Comparison", index=False)
+
+        log.debug("Highlighting mismtach pairs")
+        highlight_mismatch_cells(
+            excel_file=outfile_fqn, sheet="Data Comparison", num_ds=len(self.datasources)
+        )
+
+        end_time = time.time()
+        log.info("Finished task: Compare")
+        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+
+
+@dataclass
+class CompareColumnTask(BaseTask):
+    profile: Dict
+    project: Dict
+    runtime: RunConfig
+    datasources: List[str]
+
+    def get_column_data(self, datasource, table, column):
+        connection_profile = get_connection_profile(
+            self.profile, self.project, datasource
+        )
+        conman = self.get_connection_manager(conn_profile=connection_profile)
+
+        query = get_column_query(table, column)
+        try:
+            log.debug(f"Trying unquoted column name: {column}")
+            df = get_query_output_as_df(connection_manager=conman, query_text=query)
+        except Exception as exp:
+            log.debug(f"Failed with error: {exp}")
+            log.debug(f'Trying quoted column name: "{column}"')
+            query = get_column_query(table, column, quoted=True)
+            df = get_query_output_as_df(connection_manager=conman, query_text=query)
+        return df
+
+    def write_result(self, df, ds1, ds2):
+        outdir = create_dir_if_not_exist(self.project["outdir"])
+        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        outfile = f"{ds1}_{ds2}_column_comparison_{out_timestamp}.xlsx"
+        outfile_fqn = Path(outdir, outfile)
+
+        log.debug(f"Writing output into: {outfile_fqn}")
+        df.to_excel(outfile_fqn, sheet_name="Column Comparison", index=False)
+
+    def execute(self):
+        log.info("Starting task: compare-column")
+        start_time = time.time()
+
+        if len(self.datasources) != 2:
+            raise ValueError("Comparison works between two entities, not more, not less.")
+
+        datasource1, datasource2 = self.datasources
+        if ":" in datasource1 and ":" in datasource2:
+            datasource1, column1 = datasource1.split(":")
+            datasource2, column2 = datasource2.split(":")
+        elif ":" in datasource1:
+            datasource1, column1 = datasource1.split(":")
+            column2 = column1
+        elif ":" in datasource2:
+            datasource2, column2 = datasource2.split(":")
+            column1 = column2
+        elif (
+            "compare_column" in self.project["datasources"][datasource1]
+            and "compare_column" in self.project["datasources"][datasource2]
+        ):
+            column1 = self.project["datasources"][datasource1]["compare_column"]
+            column2 = self.project["datasources"][datasource2]["compare_column"]
+        elif "compare_column" in self.project["datasources"][datasource1]:
+            column1 = self.project["datasources"][datasource1]["compare_column"]
+            column2 = column1
+        elif "compare_column" in self.project["datasources"][datasource2]:
+            column2 = self.project["datasources"][datasource2]["compare_column"]
+            column1 = column2
+        else:
+            raise TulonaMissingPropertyError(
+                "Column name must be specified for task: compare-column"
+                "either by specifying 'compare_column' property in datasource[project] config"
+                "or with --datasources command line argument"
+                "in one of the following formats (column name is same for option 3 and 4):-"
+                "1. <datasource1>:<col1>,<datasource2>:<col2>"
+                "2. <datasource1>:<col>,<datasource2>:<col>"
+                "3. <datasource1>:<col>,<datasource2>"
+                "4. <datasource1>,<datasource2>:<col>"
+            )
+
+        ds_dict1 = self.project["datasources"][datasource1]
+        ds_dict2 = self.project["datasources"][datasource2]
+
+        dbtype1 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource1)
+        ]["type"]
+        dbtype2 = self.profile["profiles"][
+            extract_profile_name(self.project, datasource2)
+        ]["type"]
+        table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
+        table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
+
+        log.debug(f"Extracting data from table: {table_name1}")
+        df1 = self.get_column_data(datasource1, table_name1, column1)
+        log.debug(f"Extracting data from table: {table_name2}")
+        df2 = self.get_column_data(datasource2, table_name2, column2)
+
+        df1 = df1.rename(columns={c: c.lower() for c in df2.columns})
+        df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
+        column1, column2 = column1.lower(), column2.lower()
+
+        ds1_compressed = datasource1.replace("_", "")
+        ds2_compressed = datasource2.replace("_", "")
 
         df_merge = pd.merge(
             left=df1,
             right=df2,
-            on=tulona_id_col,
+            left_on=column1,
+            right_on=column2,
             how="outer",
-            suffixes=(f'_{connections[0].database}', f'_{connections[1].database}'),
-            indicator=True
+            suffixes=["_left_" + ds1_compressed, "_right_" + ds2_compressed],
+            validate="one_to_one",
+            indicator="presence",
         )
+        df_merge = df_merge[df_merge["presence"] != "both"]
 
-        # mismtaches
-        df_mismatch = df_merge[df_merge['_merge'] != 'both'].drop(tulona_id_col, axis=1)
+        log.debug("Writing comparison result")
+        self.write_result(df_merge, ds1_compressed, ds2_compressed)
 
-        # ---------> Level 2+: TODO
-
-
-        # ---------> Result
-        # metadiff
-        df1_extra_cols = list(set(df1.columns).difference(set(df2.columns)))
-        df2_extra_cols = list(set(df2.columns).difference(set(df1.columns)))
-
-        self.result_meta.append(
-            [
-                connections[0].database,
-                connections[1].database,
-                schema1,
-                schema2,
-                tab1,
-                tab2,
-                df1.shape[0],
-                df2.shape[0],
-                df_merge[df_merge['_merge'] == 'both'].shape[0],
-                df_merge[df_merge['_merge'] == 'left_only'].shape[0],
-                df_merge[df_merge['_merge'] == 'right_only'].shape[0],
-                ', '.join(df1_extra_cols),
-                ', '.join(df2_extra_cols),
-            ]
-        )
-
-        # datadiff
-        if df_mismatch.shape[0] > 0:
-            diffpath = Path(
-                self.results_dir,
-                RESTULT_LOCATIONS['datadiff_dir'],
-                f"{connections[0].database}__{connections[1].database}",
-                f"{schema1}__{schema2}"
-            )
-            diffpath.mkdir(parents=True, exist_ok=True)
-            diffcsv = Path(diffpath, f"{tab1}__{tab2}.csv")
-
-            log.debug(f"Writing {tab1} vs {tab2} diff into: {diffcsv}")
-            df_mismatch.to_csv(diffcsv, header=True, index=False)
-
-
-    def compare_tables_dask(self, connections, tab1, tab2):
-        df1 = ddf.read_sql_table(table_name=tab1, con=connections[0].conn)
-        df2 = ddf.read_sql_table(table_name=tab2, con=connections[1].conn)
-
-        # TODO
-
-
-    def compare_tables(self, connections, schema1: str, schema2: str, tab1: str, tab2: str=None):
-        tab2 = tab2 if tab2 else tab1
-
-        tab1_pk = get_table_primary_keys(engine=connections[0].engine, table=tab1)
-        tab2_pk = get_table_primary_keys(engine=connections[1].engine, table=tab2)
-
-        primary_key_available = len(tab1_pk) > 0 and len(tab2_pk) > 0 and tab1_pk == tab2_pk
-
-        if primary_key_available:
-            log.debug(f"Primary key available for table: {tab1}")
-        else:
-            log.debug(f"Primary key unavailable for table: {tab1}")
-
-        if self.runtime.engine.lower() == 'pandas':
-            self.compare_tables_pandas(
-                connections=connections,
-                schema1=schema1,
-                schema2=schema2,
-                primary_key=tab1_pk if primary_key_available else [],
-                tab1=tab1,
-                tab2=tab2
-            )
-        elif self.runtime.engine.lower() == 'dask':
-            self.compare_tables_dask(
-                connections=connections,
-                schema1=schema1,
-                schema2=schema2,
-                primary_key=tab1_pk if primary_key_available else [],
-                tab1=tab1,
-                tab2=tab2
-            )
-        else:
-            raise TulonaUnSupportedExecEngine(
-                f"Execution engine {self.runtime.engine} is not supported yet!"
-            )
-
-
-    def compare_schemas(self, connections, schema1: str, schema2: str=None):
-        schema2 = schema2 if schema2 else schema1
-
-        schema1_tables = get_tables_from_schema(engine=connections[0].engine, schema=schema1)
-        schema2_tales = get_tables_from_schema(engine=connections[1].engine, schema=schema2)
-
-        eligible_tables = list(set(schema1_tables).intersection(set(schema2_tales)))
-        log.debug(f"Tables eligible for comparison: {eligible_tables}")
-
-        for tab in eligible_tables:
-            log.debug(f"Compare table: {tab}")
-            self.compare_tables(connections=connections, schema1=schema1, schema2=schema2, tab1=tab)
-
-
-    def compare_databases(self, connections, ignore_schema):
-        if ignore_schema:
-            db1_tables = get_tables_from_db(engine=connections[0].engine)
-            db2_tables = get_tables_from_db(engine=connections[1].engine)
-
-            eligible_tables = list(set(db1_tables).intersection(set(db2_tables)))
-            # db1_extra_tables = list(set(db1_tables).difference(set(db2_tables)))
-            # db2_extra_tables = list(set(db2_tables).difference(set(db1_tables)))
-
-            for tab in eligible_tables:
-                log.debug(f"Compare table: {tab}")
-                self.compare_tables(
-                    connections=connections,
-                    schema1=DEFAULT_DATABASE[connections[0].dbtype],
-                    schema2=DEFAULT_DATABASE[connections[1].dbtype],
-                    tab1=tab,
-                    tab2=tab
-                )
-        else:
-            db1_schemas = get_schemas_from_db(engine=connections[0].engine)
-            db2_schemas = get_schemas_from_db(engine=connections[1].engine)
-
-            eligible_schemas = list(
-                set(db1_schemas)
-                .intersection(set(db2_schemas))
-                .difference({"information_schema"})
-            )
-            log.debug(f"Schemas eligible for comparison: {eligible_schemas}")
-
-            for sch in eligible_schemas:
-                log.debug(f"Compare schema: {sch}")
-                self.compare_schemas(connections=connections, schema1=sch)
-
-
-    def execute(self):
-        log.info("Starting comparison")
-        log.debug("******************** Task profile ********************")
-        log.debug(f"******* * Execution engine: {self.runtime.engine}")
-        log.debug(f"******* * Ignore schema: {self.runtime.ignore_schema}")
-        log.debug(f"*****************************************************")
-        log.debug("")
-
-        self.result_meta = []
-        self.results_dir = get_result_dir(
-            dir_dict=RESTULT_LOCATIONS,
-            base=self.runtime.outdir,
-            key='result_dir'
-        )
-
-        for profile_combo in self.eligible_conn_profiles:
-            log.debug("Creating connection instances")
-            connections = self.get_connections(profiles=profile_combo)
-
-            profile_info = [f"{d['type']}:{d['host']}:{d['database']}" for d in profile_combo]
-            log.debug(f"Comparing databases: {profile_info}")
-            self.compare_databases(connections=connections, ignore_schema=self.runtime.ignore_schema)
-
-            log.debug(f"Closing connections")
-            for c in connections:
-                c.close()
-
-        # metadata comparison
-        result_meta_cols = [
-            'db1_name',
-            'db2_name',
-            'schema1_name',
-            'schema2_name',
-            'db1_table_name',
-            'db2_table_name',
-            'db1_rowcount',
-            'db2_rowcount',
-            'matched_rowcount',
-            'db1_extra_row_count',
-            'db2_extra_row_count',
-            'db1_extra_cols',
-            'db2_extra_cols',
-        ]
-        metadiff_dir = Path(
-            self.results_dir,
-            RESTULT_LOCATIONS['metadiff_dir']
-        )
-        metadiff_dir.mkdir(parents=True, exist_ok=True)
-        metadiff_file = Path(metadiff_dir, RESTULT_LOCATIONS['result_meta_outfile'])
-        log.debug(f"Writing table comparison metadata into: {metadiff_file}")
-        df_result_meta = pd.DataFrame(data=self.result_meta, columns=result_meta_cols)
-        df_result_meta.to_csv(metadiff_file, header=True, index=False)
+        end_time = time.time()
+        log.info("Finished task: compare-column")
+        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")

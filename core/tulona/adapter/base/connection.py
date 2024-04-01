@@ -1,13 +1,7 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Dict
 
 
 @dataclass
 class BaseConnectionManager:
-
-    host: str
-    username: str
-    port: Union[int, str]
-    password: str  # mandatory
-    database: str
-    dbtype: str
+    conn_profile: Dict

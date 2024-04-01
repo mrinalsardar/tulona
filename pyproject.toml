@@ -1,0 +1,99 @@
+[project]
+name = "tulona"
+version = "0.1.1"
+description = "A tool to compare data from different sources."
+dependencies = [
+  "click~=8.1",
+  "ruamel.yaml~=0.18",
+  "psycopg2-binary~=2.9",
+  "pymysql~=1.1",
+  "cryptography~=42.0",
+  "snowflake-sqlalchemy~=1.5",
+  "pyodbc~=5.1",
+  "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
+  "openpyxl~=3.1",
+  "Jinja2~=3.1",
+]
+requires-python = ">= 3.8"
+authors = [
+  {name = "Mrinal Kanti Sardar"},
+]
+readme = "README.rst"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+keywords = [
+  "tulona",
+  "comparison",
+  "data comparison",
+  "database scan",
+  "database profile",
+]
+
+[project.scripts]
+tulona = "tulona.cli.base:cli"
+
+[project.urls]
+Homepage = "https://github.com/mrinalsardar/tulona"
+Documentation = "https://github.com/mrinalsardar/tulona"
+Repository = "https://github.com/mrinalsardar/tulona.git"
+Issues = "https://github.com/mrinalsardar/tulona/issues"
+# Changelog = "https://github.com/mrinalsardar/tulona/blob/master/CHANGELOG.md"
+
+[build-system]
+requires = ["setuptools >= 69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["core/"]
+include = ["tulona", "tulona.*"]
+
+[tool.black]
+line-length = 90
+target_version = ["py38", "py39", "py310", "py311"]
+exclude = '''
+
+(
+  /(
+      \.git          # exclude a few common directories in the
+    | \.github       # root of the project
+    | \.pytest_cache
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+)
+'''
+
+[tool.coverage.run]
+branch = true
+source = ["core"]
+
+[tool.coverage.report]
+exclude_also = [
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "raise TulonaNotImplementedError",
+  "raise TulonaProjectException",
+  "raise TulonaInvalidProjectConfigError",
+  "raise TulonaUnSupportedExecEngine",
+  "raise TulonaProfileException",
+  "raise TulonaInvalidProfileConfigError",
+  "raise TulonaMissingPropertyError",
+  "raise TulonaMissingArgumentError",
+  "raise TulonaMissingPrimaryKeyError",
+  "raise TulonaFundamentalError",
+]
+
+[tool.isort]
+profile = "black"
+line_length = 90
+skip = [".gitignore"]
