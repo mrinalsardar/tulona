@@ -97,7 +97,6 @@ class ProfileTask(BaseTask):
             df = df.rename(columns={c: c.lower() for c in df.columns})
             df_collection.append(df)
 
-
         outfile_fqn = self.get_outfile_fqn(ds_name_compressed_list)
 
         if self.compare:

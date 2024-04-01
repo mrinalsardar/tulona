@@ -11,7 +11,7 @@ from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
 from tulona.util.dataframe import apply_column_exclusion
-from tulona.util.excel import highlight_mismatch_pair
+from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.project import extract_table_name_from_config
@@ -70,17 +70,14 @@ class CompareDataTask(BaseTask):
         df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
 
-    def write_output(self, df: pd.DataFrame, ds1, ds2):
+
+    def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
         out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        outfile = f"{ds1}_{ds2}_data_comparison_{out_timestamp}.xlsx"
+        outfile = f"{'_'.join(ds_list)}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
+        return outfile_fqn
 
-        log.debug(f"Writing output into: {outfile_fqn}")
-        df.to_excel(outfile_fqn, sheet_name="Data Comparison", index=False)
-
-        log.debug("Highlighting mismtach pairs")
-        highlight_mismatch_pair(excel_file=outfile_fqn, sheet="Data Comparison")
 
     def execute(self):
         log.info("Starting task: Compare")
@@ -202,8 +199,17 @@ class CompareDataTask(BaseTask):
 
         df_merge = df_merge[sorted(df_merge.columns.tolist())]
 
-        log.debug("Writing comparison result")
-        self.write_output(df_merge, ds1_compressed, ds2_compressed)
+        outfile_fqn = self.get_outfile_fqn([ds1_compressed, ds2_compressed])
+        log.debug("Writing comparison result into: {outfile_fqn}")
+        df_merge.to_excel(outfile_fqn, sheet_name="Data Comparison", index=False)
+
+        log.debug("Highlighting mismtach pairs")
+        # highlight_mismatch_pair(excel_file=outfile_fqn, sheet="Data Comparison")
+        highlight_mismatch_cells(
+            excel_file=outfile_fqn,
+            sheet="Data Comparison",
+            num_ds=len(self.datasources)
+        )
 
         end_time = time.time()
         log.info("Finished task: Compare")

@@ -47,7 +47,7 @@ def highlight_mismatch_pair(excel_file, sheet):
     wb.save(excel_file)
 
 
-def highlight_mismatch_cells(excel_file, sheet: str, num_ds: int, skip_columns: Union[str, list[str]]):
+def highlight_mismatch_cells(excel_file, sheet: str, num_ds: int, skip_columns: Union[str, list[str]]=None):
     wb = load_workbook(excel_file)
     ws = wb[sheet]
 
@@ -76,10 +76,12 @@ def highlight_mismatch_cells(excel_file, sheet: str, num_ds: int, skip_columns: 
         bottom=Side(border_style="thick"),
     )
 
-    skip_columns = skip_columns if isinstance(skip_columns, list) else [skip_columns]
-    skip_idxs = [get_column_index(ws, c) - 1 for c in skip_columns]
-    compareable_col_idxs = list(set(range(0, ws.max_column)) - set(skip_idxs))
-    print(f"compareable_col_idxs: {compareable_col_idxs}")
+    if skip_columns:
+        skip_columns = skip_columns if isinstance(skip_columns, list) else [skip_columns]
+        skip_idxs = [get_column_index(ws, c) - 1 for c in skip_columns]
+        compareable_col_idxs = list(set(range(ws.max_column)) - set(skip_idxs))
+    else:
+        compareable_col_idxs = list(range(ws.max_column))
 
     for row in ws.iter_rows(
         min_row=2, min_col=0, max_row=ws.max_row, max_col=ws.max_column
