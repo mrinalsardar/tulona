@@ -4,7 +4,7 @@ import pandas as pd
 from dataclasses import dataclass, fields, _MISSING_TYPE
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
@@ -61,24 +61,6 @@ class ProfileTask(BaseTask):
         outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
         return outfile_fqn
-
-
-    # def write_result(self, data: Union[pd.DataFrame, list[pd.DataFrame]], ds_list: list, skip_columns: list[str]=[]):
-    #     outdir = create_dir_if_not_exist(self.project["outdir"])
-    #     out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    #     outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
-    #     outfile_fqn = Path(outdir, outfile)
-    #     log.debug(f"Writing output into: {outfile_fqn}")
-
-    #     if isinstance(data, pd.DataFrame):
-    #         data.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
-    #         log.debug("Highlighting mismatches")
-    #     elif isinstance(data, list):
-    #         with pd.ExcelWriter(outfile_fqn) as writer:
-    #             for ds_name, df in zip(ds_list, data):
-    #                 df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
-    #     else:
-    #         raise ValueError("Unsupported data could not be written into an Excel file")
 
 
     def execute(self):
