@@ -95,8 +95,8 @@ This is how a `tulona-project.yml` file looks like:
         - phone_number
       compare_column: Employee_ID
 
-.. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml/badge.svg
-   :target: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml
+.. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
+   :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
 .. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/mrinalsardar/tulona/branch/main
    :alt: Coverage status
