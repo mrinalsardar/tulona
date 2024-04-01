@@ -1,7 +1,8 @@
+from typing import Union
+
 from openpyxl import load_workbook, styles
 from openpyxl.styles import Border, Side
 from openpyxl.worksheet.worksheet import Worksheet
-from typing import Union
 
 
 def get_column_index(sheet: Worksheet, column: str):
@@ -47,7 +48,9 @@ def highlight_mismatch_pair(excel_file, sheet):
     wb.save(excel_file)
 
 
-def highlight_mismatch_cells(excel_file, sheet: str, num_ds: int, skip_columns: Union[str, list[str]]=None):
+def highlight_mismatch_cells(
+    excel_file, sheet: str, num_ds: int, skip_columns: Union[str, list[str]] = None
+):
     wb = load_workbook(excel_file)
     ws = wb[sheet]
 

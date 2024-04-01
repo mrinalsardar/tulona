@@ -9,6 +9,7 @@ from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
 from tulona.task.compare import CompareColumnTask, CompareDataTask
 from tulona.task.profile import ProfileTask
+
 # from tulona.task.scan import ScanTask
 from tulona.task.test_connection import TestConnectionTask
 
@@ -139,7 +140,7 @@ def profile(ctx, **kwargs):
         ctx.obj["project"],
         ctx.obj["runtime"],
         datasource_list,
-        compare=kwargs["compare"]
+        compare=kwargs["compare"],
     )
     task.execute()
 

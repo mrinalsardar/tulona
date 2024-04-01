@@ -70,14 +70,12 @@ class CompareDataTask(BaseTask):
         df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
 
-
     def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
         out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         outfile = f"{'_'.join(ds_list)}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
         return outfile_fqn
-
 
     def execute(self):
         log.info("Starting task: Compare")
@@ -206,9 +204,7 @@ class CompareDataTask(BaseTask):
         log.debug("Highlighting mismtach pairs")
         # highlight_mismatch_pair(excel_file=outfile_fqn, sheet="Data Comparison")
         highlight_mismatch_cells(
-            excel_file=outfile_fqn,
-            sheet="Data Comparison",
-            num_ds=len(self.datasources)
+            excel_file=outfile_fqn, sheet="Data Comparison", num_ds=len(self.datasources)
         )
 
         end_time = time.time()
@@ -222,7 +218,6 @@ class CompareColumnTask(BaseTask):
     project: Dict
     runtime: RunConfig
     datasources: List[str]
-
 
     def get_column_data(self, datasource, table, column):
         connection_profile = get_connection_profile(

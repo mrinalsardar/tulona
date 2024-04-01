@@ -24,5 +24,5 @@ sample_count = click.option(
 compare = click.option(
     "--compare",
     is_flag=True,
-    help="Can be used with profile task to compare profiles of different data sources"
+    help="Can be used with profile task to compare profiles of different data sources",
 )

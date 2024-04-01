@@ -1,10 +1,11 @@
 import logging
 import time
-import pandas as pd
-from dataclasses import dataclass, fields, _MISSING_TYPE
+from dataclasses import _MISSING_TYPE, dataclass, fields
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
+
+import pandas as pd
 
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
@@ -34,7 +35,6 @@ class ProfileTask(BaseTask):
             ):
                 setattr(self, field.name, field.default)
 
-
     def get_column_info(self, conman, database, schema, table):
         if database:
             query = f"""
@@ -54,14 +54,12 @@ class ProfileTask(BaseTask):
 
         return df
 
-
     def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
         out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
         return outfile_fqn
-
 
     def execute(self):
 
@@ -73,12 +71,14 @@ class ProfileTask(BaseTask):
         for ds_name in self.datasources:
             # Extract data source name from datasource:column combination
             ds_name = ds_name.split(":")[0]
-            ds_name_compressed = ds_name.replace("_", '')
+            ds_name_compressed = ds_name.replace("_", "")
             ds_name_compressed_list.append(ds_name_compressed)
             log.debug(f"Extracting metadata for {ds_name}")
 
             ds_config = self.project["datasources"][ds_name]
-            dbtype = self.profile["profiles"][extract_profile_name(self.project, ds_name)]["type"]
+            dbtype = self.profile["profiles"][
+                extract_profile_name(self.project, ds_name)
+            ]["type"]
 
             # MySQL doesn't have logical database
             if "database" in ds_config and dbtype.lower() != "mysql":
@@ -121,10 +121,7 @@ class ProfileTask(BaseTask):
             df_merge = df_collection_final.pop()
             for df in df_collection_final:
                 df_merge = pd.merge(
-                    left=df_merge,
-                    right=df,
-                    on="column_name",
-                    how="inner"
+                    left=df_merge, right=df, on="column_name", how="inner"
                 )
             df_merge = df_merge[sorted(df_merge.columns.tolist())]
 
@@ -134,7 +131,7 @@ class ProfileTask(BaseTask):
                 excel_file=outfile_fqn,
                 sheet="Metadata Comparison",
                 num_ds=len(ds_name_compressed_list),
-                skip_columns="column_name"
+                skip_columns="column_name",
             )
         else:
             log.debug(f"Writing results into file: {outfile_fqn}")
