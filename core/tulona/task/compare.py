@@ -104,7 +104,7 @@ class CompareDataTask(BaseTask):
         if "primary_key" in ds_dict1 and "primary_key" in ds_dict2:
             i = 0
             while i < 10:
-                log.debug(f"Extraction iteration: {i+1}")
+                log.debug(f"Extraction iteration: {i + 1}")
 
                 df1 = self.get_table_data(datasource=datasource1)
                 if df1.shape[0] == 0:

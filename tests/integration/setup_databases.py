@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from faker import Faker
-from sqlalchemy import create_engine, schema
+from sqlalchemy import create_engine
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
