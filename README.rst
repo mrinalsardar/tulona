@@ -22,10 +22,12 @@ Install wheel executable file
 * Execute `pip install <wheel-file.whl>`
 
 
-Sample profiles.yml
-----------------------
+Connection Profiles
+-------------------
+Connection profiles must be setup in `profiles.yml` file and it must be placed under `$HOME/.tulona` dierctory.
+This is how a sample `profiles.yml` looks like:
+
 .. code-block:: yaml
-  :linenos:
 
   integration_project: # project_name
     profiles:
@@ -57,21 +59,22 @@ Sample profiles.yml
         type: mssql
         connection_string: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=dagger;DATABASE=test;UID=user;PWD=password'
 
-Sample tulona-project.yml
--------------------------
+Project Config File
+-------------------
+Project config must be created in `tulona-project.yml` file and this file can be placed anywhere.
+The `output` folder will be create in the same dierctory where `tulona-project.yml` file is present.
+This is how a `tulona-project.yml` file looks like:
+
 .. code-block:: yaml
-  :linenos:
 
   version: '2.0'
   name: integration_project
   config-version: 1
 
-  engine: pandas # supported engines: pandas
   outdir: output # the folder comparison result is written into
 
   # This is just the list of data sources, doesn't mean tulona will run tasks for all of them.
   # Datasources need to be picked in the CLI command to run tasks against.
-  # Right now they are details about tables only.
   datasources:
     postgres_postgres_public_employee:
       connection_profile: pgdb
@@ -91,7 +94,6 @@ Sample tulona-project.yml
       exclude_columns:
         - phone_number
       compare_column: Employee_ID
-
 
 .. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/tests.yaml
