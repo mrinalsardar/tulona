@@ -8,6 +8,7 @@ from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
+from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.sql import get_query_output_as_df
@@ -54,21 +55,30 @@ class ProfileTask(BaseTask):
         return df
 
 
-    def write_result(self, data: Union[pd.DataFrame, list[pd.DataFrame]], ds_list: list):
+    def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
         out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
-        log.debug(f"Writing output into: {outfile_fqn}")
+        return outfile_fqn
 
-        if isinstance(data, pd.DataFrame):
-            data.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
-        elif isinstance(data, list[pd.DataFrame]):
-            with pd.ExcelWriter(outfile_fqn) as writer:
-                for ds_name, df in zip(ds_list, data):
-                    df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
-        else:
-            raise ValueError("Unsupported data could not be written into an Excel file")
+
+    # def write_result(self, data: Union[pd.DataFrame, list[pd.DataFrame]], ds_list: list, skip_columns: list[str]=[]):
+    #     outdir = create_dir_if_not_exist(self.project["outdir"])
+    #     out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    #     outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
+    #     outfile_fqn = Path(outdir, outfile)
+    #     log.debug(f"Writing output into: {outfile_fqn}")
+
+    #     if isinstance(data, pd.DataFrame):
+    #         data.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
+    #         log.debug("Highlighting mismatches")
+    #     elif isinstance(data, list):
+    #         with pd.ExcelWriter(outfile_fqn) as writer:
+    #             for ds_name, df in zip(ds_list, data):
+    #                 df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
+    #     else:
+    #         raise ValueError("Unsupported data could not be written into an Excel file")
 
 
     def execute(self):
@@ -102,20 +112,33 @@ class ProfileTask(BaseTask):
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             df = self.get_column_info(conman, database, schema, table)
-            df = df.rename(
-                columns={
-                    c: (
-                        f"{c.lower()}_{ds_name_compressed}" if c.lower() != "column_name" else c.lower()
-                    )
-                    for c in df.columns
-                }
-            )
+            df = df.rename(columns={c: c.lower() for c in df.columns})
             df_collection.append(df)
+
+
+        outfile_fqn = self.get_outfile_fqn(ds_name_compressed_list)
 
         if self.compare:
             log.debug("Preparing metadata comparison")
-            df_merge = df_collection.pop()
-            for df in df_collection:
+            common_columns = set(df_collection[0].columns.tolist())
+            df_collection_final = []
+            for ds_name, df in zip(ds_name_compressed_list, df_collection):
+                common_columns = common_columns.intersection(set(df.columns.tolist()))
+
+            print(f"num common cols: {len(common_columns)}")
+
+            for ds_name, df in zip(ds_name_compressed_list, df_collection):
+                df = df[list(common_columns)]
+                df = df.rename(
+                    columns={
+                        c: f"{c}_{ds_name}" if c != "column_name" else c
+                        for c in df.columns
+                    }
+                )
+                df_collection_final.append(df)
+
+            df_merge = df_collection_final.pop()
+            for df in df_collection_final:
                 df_merge = pd.merge(
                     left=df_merge,
                     right=df,
@@ -123,9 +146,20 @@ class ProfileTask(BaseTask):
                     how="inner"
                 )
             df_merge = df_merge[sorted(df_merge.columns.tolist())]
-            self.write_result(data=df_merge, ds_list=ds_name_compressed_list)
+
+            log.debug(f"Writing results into file: {outfile_fqn}")
+            df_merge.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
+            highlight_mismatch_cells(
+                excel_file=outfile_fqn,
+                sheet="Metadata Comparison",
+                num_ds=len(ds_name_compressed_list),
+                skip_columns="column_name"
+            )
         else:
-            self.write_result(data=df_collection, ds_list=ds_name_compressed_list)
+            log.debug(f"Writing results into file: {outfile_fqn}")
+            with pd.ExcelWriter(outfile_fqn) as writer:
+                for ds_name, df in zip(ds_name_compressed_list, df_collection):
+                    df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
 
         end_time = time.time()
         log.info("Finished task: profiling")

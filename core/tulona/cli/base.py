@@ -139,7 +139,7 @@ def profile(ctx, **kwargs):
         ctx.obj["project"],
         ctx.obj["runtime"],
         datasource_list,
-        compare='compare' in kwargs
+        compare=kwargs["compare"]
     )
     task.execute()
 
