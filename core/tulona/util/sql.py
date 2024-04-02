@@ -48,3 +48,51 @@ def build_filter_query_expression(df: pd.DataFrame, primary_key: str):
         query_expr = f"""{primary_key} in ('{"', '".join(primary_keys)}')"""
 
     return query_expr
+
+
+def get_metadata_query(database, schema, table):
+    if database:
+        query = f"""
+        select * from information_schema.columns
+        where table_catalog = '{database}'
+        and table_schema = '{schema}'
+        and table_name = '{table}'
+        """
+    else:
+        query = f"""
+        select * from information_schema.columns
+        where table_schema = '{schema}'
+        and table_name = '{table}'
+        """
+    return query
+
+
+def get_metric_query(database, schema, table, columns: list, metrics: list, quoted=False):
+    function_map = {
+        "min": "min({}) as {}_min",
+        "max": "max({}) as {}_max",
+        "avg": "avg({}) as {}_avg",
+        "average": "avg({}) as {}_average",
+        "count": "count({}) as {}_count",
+        "distinct_count": "count(distinct({})) as {}_distinct_count",
+    }
+
+    func_list = [function_map[m.lower()] for m in metrics]
+    call_funcs = []
+
+    for col in columns:
+        if quoted:
+            qp = [f.format(f'"{col}"', col) for f in func_list]
+        else:
+            qp = [f.format(col, col) for f in func_list]
+        call_funcs.extend(qp)
+
+    table_fqn = f"{database if database else ''}{'.' if database else ''}{schema}.{table}"
+
+    query = f"""
+    select
+        {", ".join(call_funcs)}
+    from {table_fqn}
+    """
+
+    return query

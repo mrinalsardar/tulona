@@ -201,7 +201,7 @@ class CompareDataTask(BaseTask):
         log.debug("Writing comparison result into: {outfile_fqn}")
         df_merge.to_excel(outfile_fqn, sheet_name="Data Comparison", index=False)
 
-        log.debug("Highlighting mismtach pairs")
+        log.debug("Highlighting mismtach cells")
         highlight_mismatch_cells(
             excel_file=outfile_fqn, sheet="Data Comparison", num_ds=len(self.datasources)
         )
