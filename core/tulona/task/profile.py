@@ -85,25 +85,29 @@ class ProfileTask(BaseTask):
 
             # Extract metrics like min, max, avg, count, distinct count etc.
             log.debug("Extracting metrics")
-            # metrics = ["min", "max", "avg", "count", "distinct_count",]
-            metrics = ["count", "distinct_count"]
+            metrics = ["min", "max", "avg", "count", "distinct_count",]
+            # metrics = ["count", "distinct_count"]
             metrics = list(map(lambda s: s.lower(), metrics))
+            type_dict = df_meta[["column_name", "data_type"]].to_dict(orient='list')
+            columns_dtype = {k:v for k,v in zip(type_dict["column_name"], type_dict["data_type"])}
+
             try:
                 log.debug("Trying query with unquoted column names")
                 metric_query = get_metric_query(
-                    database, schema, table, df_meta["column_name"].tolist(), metrics
+                    database, schema, table, columns_dtype, metrics
                 )
                 log.debug(f"Executing query: {metric_query}")
                 df_metric = get_query_output_as_df(
                     connection_manager=conman, query_text=metric_query
                 )
-            except Exception:
+            except Exception as exp:
+                log.warn(f"Previous query failed with error: {exp}")
                 log.debug("Trying query with quoted column names")
                 metric_query = get_metric_query(
                     database,
                     schema,
                     table,
-                    df_meta["column_name"].tolist(),
+                    columns_dtype,
                     metrics,
                     quoted=True,
                 )

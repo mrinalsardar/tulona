@@ -1,4 +1,5 @@
 import pandas as pd
+from typing import Dict
 
 from tulona.exceptions import TulonaNotImplementedError
 
@@ -67,7 +68,33 @@ def get_metadata_query(database, schema, table):
     return query
 
 
-def get_metric_query(database, schema, table, columns: list, metrics: list, quoted=False):
+def get_metric_query(database, schema, table, columns_dtype: Dict, metrics: list, quoted=False):
+    # TODO: add support for date/timestamp
+    numeric_types = [
+        "smallint",
+        "integer",
+        "bigint",
+        "decimal",
+        "numeric",
+        "real",
+        "double precision",
+        "smallserial",
+        "serial",
+        "bigserial",
+        "tinyint",
+        "mediumint",
+        "int",
+        "float",
+        "float4",
+        "float8",
+        "double",
+        "number",
+        "byteint",
+        "bit",
+        "smallmoney",
+        "money",
+    ]
+    numeric_funs = ["min", "max", "average", "avg"]
     function_map = {
         "min": "min({}) as {}_min",
         "max": "max({}) as {}_max",
@@ -77,14 +104,24 @@ def get_metric_query(database, schema, table, columns: list, metrics: list, quot
         "distinct_count": "count(distinct({})) as {}_distinct_count",
     }
 
-    func_list = [function_map[m.lower()] for m in metrics]
+    # func_list = [function_map[m.lower()] for m in metrics]
     call_funcs = []
 
-    for col in columns:
+    for col, dtype  in columns_dtype.items():
         if quoted:
-            qp = [f.format(f'"{col}"', col) for f in func_list]
+            qp = []
+            for m in metrics:
+                if m in numeric_funs and dtype not in numeric_types:
+                    qp.append(f"'NA' as {col}_{m.lower()}")
+                else:
+                    qp.append(function_map[m.lower()].format(f'"{col}"', col))
         else:
-            qp = [f.format(col, col) for f in func_list]
+            qp = []
+            for m in metrics:
+                if m in numeric_funs and dtype not in numeric_types:
+                    qp.append(f"'NA' as {col}_{m.lower()}")
+                else:
+                    qp.append(function_map[m.lower()].format(col, col))
         call_funcs.extend(qp)
 
     table_fqn = f"{database if database else ''}{'.' if database else ''}{schema}.{table}"
