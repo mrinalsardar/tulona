@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pandas as pd
 
 from tulona.exceptions import TulonaNotImplementedError
@@ -48,3 +50,117 @@ def build_filter_query_expression(df: pd.DataFrame, primary_key: str):
         query_expr = f"""{primary_key} in ('{"', '".join(primary_keys)}')"""
 
     return query_expr
+
+
+def get_metadata_query(database, schema, table):
+    if database:
+        query = f"""
+        select * from information_schema.columns
+        where table_catalog = '{database}'
+        and table_schema = '{schema}'
+        and table_name = '{table}'
+        """
+    else:
+        query = f"""
+        select * from information_schema.columns
+        where table_schema = '{schema}'
+        and table_name = '{table}'
+        """
+    return query
+
+
+def get_metric_query(
+    database, schema, table, columns_dtype: Dict, metrics: list, quoted=False
+):
+    # TODO: add support for date/timestamp
+    numeric_types = [
+        "smallint",
+        "integer",
+        "bigint",
+        "decimal",
+        "numeric",
+        "real",
+        "double precision",
+        "smallserial",
+        "serial",
+        "bigserial",
+        "tinyint",
+        "mediumint",
+        "int",
+        "float",
+        "float4",
+        "float8",
+        "double",
+        "number",
+        "byteint",
+        "bit",
+        "smallmoney",
+        "money",
+    ]
+    timestamp_types = [
+        "timestamp",
+        "date",
+        "time",
+        "year",
+        "datetime",
+        "interval",
+        "datetimeoffset",
+        "smalldatetime",
+        "datetime2",
+        "timestamp_tz",
+        "timestamp_ltz",
+        "timestamp_ntz",
+        "timestamp with time zone",  # TODO probably incorrect representation
+        "timestamp without time zone",
+    ]
+    numeric_funcs = [
+        "min",
+        "max",
+        "average",
+        "avg",
+    ]
+    timestamp_funcs = [
+        "min",
+        "max",
+    ]
+
+    function_map = {
+        "min": "min({}) as {}_min",
+        "max": "max({}) as {}_max",
+        "avg": "avg({}) as {}_avg",
+        "average": "avg({}) as {}_average",
+        "count": "count({}) as {}_count",
+        "distinct_count": "count(distinct({})) as {}_distinct_count",
+    }
+
+    call_funcs = []
+    for col, dtype in columns_dtype.items():
+        if quoted:
+            qp = []
+            for m in metrics:
+                if (m in numeric_funcs and dtype not in numeric_types) or (
+                    m in timestamp_funcs and dtype not in timestamp_types
+                ):
+                    qp.append(f"'NA' as {col}_{m.lower()}")
+                else:
+                    qp.append(function_map[m.lower()].format(f'"{col}"', col))
+        else:
+            qp = []
+            for m in metrics:
+                if (m in numeric_funcs and dtype not in numeric_types) or (
+                    m in timestamp_funcs and dtype not in timestamp_types
+                ):
+                    qp.append(f"'NA' as {col}_{m.lower()}")
+                else:
+                    qp.append(function_map[m.lower()].format(col, col))
+        call_funcs.extend(qp)
+
+    table_fqn = f"{database if database else ''}{'.' if database else ''}{schema}.{table}"
+
+    query = f"""
+    select
+        {", ".join(call_funcs)}
+    from {table_fqn}
+    """
+
+    return query
