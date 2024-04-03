@@ -161,6 +161,8 @@ class ProfileTask(BaseTask):
             df_merge = df_merge[sorted(df_merge.columns.tolist())]
 
             log.debug(f"Writing results into file: {outfile_fqn}")
+            primary_key_col = df_merge.pop("column_name")
+            df_merge.insert(loc=0, column="column_name", value=primary_key_col)
             df_merge.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
 
             log.debug("Highlighting mismtach cells")
@@ -174,6 +176,8 @@ class ProfileTask(BaseTask):
             log.debug(f"Writing results into file: {outfile_fqn}")
             with pd.ExcelWriter(outfile_fqn) as writer:
                 for ds_name, df in zip(ds_name_compressed_list, df_collection):
+                    primary_key_col = df.pop("column_name")
+                    df.insert(loc=0, column="column_name", value=primary_key_col)
                     df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
 
         end_time = time.time()

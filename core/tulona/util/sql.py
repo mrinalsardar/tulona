@@ -94,7 +94,25 @@ def get_metric_query(database, schema, table, columns_dtype: Dict, metrics: list
         "smallmoney",
         "money",
     ]
-    numeric_funs = ["min", "max", "average", "avg"]
+    timestamp_types = [
+        "timestamp",
+        "date",
+        "time",
+        "year",
+        "datetime",
+        "interval",
+        "datetimeoffset",
+        "smalldatetime",
+        "datetime2",
+        "timestamp_tz",
+        "timestamp_ltz",
+        "timestamp_ntz",
+        "timestamp with time zone", # TODO probably incorrect representation
+        "timestamp without time zone",
+    ]
+    numeric_funcs = ["min", "max", "average", "avg",]
+    timestamp_funcs = ["min", "max",]
+
     function_map = {
         "min": "min({}) as {}_min",
         "max": "max({}) as {}_max",
@@ -104,21 +122,19 @@ def get_metric_query(database, schema, table, columns_dtype: Dict, metrics: list
         "distinct_count": "count(distinct({})) as {}_distinct_count",
     }
 
-    # func_list = [function_map[m.lower()] for m in metrics]
     call_funcs = []
-
     for col, dtype  in columns_dtype.items():
         if quoted:
             qp = []
             for m in metrics:
-                if m in numeric_funs and dtype not in numeric_types:
+                if (m in numeric_funcs and dtype not in numeric_types) or (m in timestamp_funcs and dtype not in timestamp_types):
                     qp.append(f"'NA' as {col}_{m.lower()}")
                 else:
                     qp.append(function_map[m.lower()].format(f'"{col}"', col))
         else:
             qp = []
             for m in metrics:
-                if m in numeric_funs and dtype not in numeric_types:
+                if (m in numeric_funcs and dtype not in numeric_types) or (m in timestamp_funcs and dtype not in timestamp_types):
                     qp.append(f"'NA' as {col}_{m.lower()}")
                 else:
                     qp.append(function_map[m.lower()].format(col, col))
