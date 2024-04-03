@@ -85,11 +85,19 @@ class ProfileTask(BaseTask):
 
             # Extract metrics like min, max, avg, count, distinct count etc.
             log.debug("Extracting metrics")
-            metrics = ["min", "max", "avg", "count", "distinct_count",]
+            metrics = [
+                "min",
+                "max",
+                "avg",
+                "count",
+                "distinct_count",
+            ]
             # metrics = ["count", "distinct_count"]
             metrics = list(map(lambda s: s.lower(), metrics))
-            type_dict = df_meta[["column_name", "data_type"]].to_dict(orient='list')
-            columns_dtype = {k:v for k,v in zip(type_dict["column_name"], type_dict["data_type"])}
+            type_dict = df_meta[["column_name", "data_type"]].to_dict(orient="list")
+            columns_dtype = {
+                k: v for k, v in zip(type_dict["column_name"], type_dict["data_type"])
+            }
 
             try:
                 log.debug("Trying query with unquoted column names")

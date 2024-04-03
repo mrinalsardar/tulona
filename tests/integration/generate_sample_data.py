@@ -1,8 +1,8 @@
 import random
-from pathlib import Path
-import numpy as np
 from datetime import datetime
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from faker import Faker
 
@@ -30,10 +30,12 @@ def generate_employee_data(num_employees):
         "Department": [fake.job() for _ in range(num_employees)],
         "Salary": [random.randint(30000, 100000) for _ in range(num_employees)],
         "Date_of_Birth": [
-            np.random.choice(pd.date_range(min_dob, max_dob)) for _ in range(num_employees)
+            np.random.choice(pd.date_range(min_dob, max_dob))
+            for _ in range(num_employees)
         ],
         "Employment_Date": [
-            np.random.choice(pd.date_range(start_date, end_date)) for _ in range(num_employees)
+            np.random.choice(pd.date_range(start_date, end_date))
+            for _ in range(num_employees)
         ],
     }
 

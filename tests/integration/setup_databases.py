@@ -44,8 +44,8 @@ if __name__ == "__main__":
             df.loc[rows_to_modify, "Department"] = new_values
 
             # Converting date time columns from string to datetime
-            df['Employment_Date'] = pd.to_datetime(df['Employment_Date'])
-            df['Date_of_Birth'] = pd.to_datetime(df['Date_of_Birth'])
+            df["Employment_Date"] = pd.to_datetime(df["Employment_Date"])
+            df["Date_of_Birth"] = pd.to_datetime(df["Date_of_Birth"])
 
             # Dropping random rows
             keep = int((df.shape[0] / 100) * random.randint(80, 100))

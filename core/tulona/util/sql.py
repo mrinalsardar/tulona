@@ -1,5 +1,6 @@
-import pandas as pd
 from typing import Dict
+
+import pandas as pd
 
 from tulona.exceptions import TulonaNotImplementedError
 
@@ -68,7 +69,9 @@ def get_metadata_query(database, schema, table):
     return query
 
 
-def get_metric_query(database, schema, table, columns_dtype: Dict, metrics: list, quoted=False):
+def get_metric_query(
+    database, schema, table, columns_dtype: Dict, metrics: list, quoted=False
+):
     # TODO: add support for date/timestamp
     numeric_types = [
         "smallint",
@@ -107,11 +110,19 @@ def get_metric_query(database, schema, table, columns_dtype: Dict, metrics: list
         "timestamp_tz",
         "timestamp_ltz",
         "timestamp_ntz",
-        "timestamp with time zone", # TODO probably incorrect representation
+        "timestamp with time zone",  # TODO probably incorrect representation
         "timestamp without time zone",
     ]
-    numeric_funcs = ["min", "max", "average", "avg",]
-    timestamp_funcs = ["min", "max",]
+    numeric_funcs = [
+        "min",
+        "max",
+        "average",
+        "avg",
+    ]
+    timestamp_funcs = [
+        "min",
+        "max",
+    ]
 
     function_map = {
         "min": "min({}) as {}_min",
@@ -123,18 +134,22 @@ def get_metric_query(database, schema, table, columns_dtype: Dict, metrics: list
     }
 
     call_funcs = []
-    for col, dtype  in columns_dtype.items():
+    for col, dtype in columns_dtype.items():
         if quoted:
             qp = []
             for m in metrics:
-                if (m in numeric_funcs and dtype not in numeric_types) or (m in timestamp_funcs and dtype not in timestamp_types):
+                if (m in numeric_funcs and dtype not in numeric_types) or (
+                    m in timestamp_funcs and dtype not in timestamp_types
+                ):
                     qp.append(f"'NA' as {col}_{m.lower()}")
                 else:
                     qp.append(function_map[m.lower()].format(f'"{col}"', col))
         else:
             qp = []
             for m in metrics:
-                if (m in numeric_funcs and dtype not in numeric_types) or (m in timestamp_funcs and dtype not in timestamp_types):
+                if (m in numeric_funcs and dtype not in numeric_types) or (
+                    m in timestamp_funcs and dtype not in timestamp_types
+                ):
                     qp.append(f"'NA' as {col}_{m.lower()}")
                 else:
                     qp.append(function_map[m.lower()].format(col, col))
