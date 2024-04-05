@@ -167,8 +167,10 @@ class CompareDataTask(BaseTask):
 
         # Exclude columns
         log.debug("Excluding columns")
-        df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
-        df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
+        if 'exclude_columns' in ds_dict1:
+            df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
+        if 'exclude_columns' in ds_dict2:
+            df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
 
         # Compare
         common_columns = list(
