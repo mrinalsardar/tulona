@@ -69,33 +69,38 @@ This is how a `tulona-project.yml` file looks like:
 
   outdir: output # the folder comparison result is written into
 
-  # This is just the list of data sources, doesn't mean tulona will run tasks for all of them.
-  # Datasources need to be picked in the CLI command to run tasks against.
   datasources:
-    postgres_postgres_public_employee:
+    employee_postgres:
       connection_profile: pgdb
       database: postgres
       schema: public
       table: employee
       primary_key: employee_id
-      exclude_columns:
+      exclude_columns:  # optional
         - name
-      compare_column: Employee_ID
-    mysql_db_db_employee:
+      compare_column: Employee_ID  # conditional optional
+    employee_mysql:
       connection_profile: mydb
       database: db
       schema: db
       table: employee
       primary_key: employee_id
-      exclude_columns:
+      exclude_columns:  # optional
         - phone_number
-      compare_column: Employee_ID
+      compare_column: Employee_ID  # conditional optional
 
 
 Sample Commands
 ---------------
-* Profile without compare:
-  `tulona profile --datasources <datasource1>,<datasource2>`
+- tulona test-connection --datasources employee_postgres,employee_mysql
+- tulona profile --datasources employee_postgres,employee_mysql
+- tulona profile --compare --datasources employee_postgres,employee_mysql
+- tulona compare-data --datasources employee_postgres,employee_mysql
+- tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql
+- tulona compare-column --datasources employee_postgres,employee_mysql
+- tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql
+- tulona compare-column --datasources employee_postgres,employee_mysql:Employee_ID
+- tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql:Employee_ID
 
 
 Development Environment Setup
