@@ -160,6 +160,7 @@ class ProfileTask(BaseTask):
                         for c in df.columns
                     }
                 )
+                df["column_name"] = df["column_name"].str.lower()
                 df_collection_final.append(df)
 
             df_merge = df_collection_final.pop()
@@ -168,6 +169,7 @@ class ProfileTask(BaseTask):
                     left=df_merge, right=df, on="column_name", how="inner"
                 )
             df_merge = df_merge[sorted(df_merge.columns.tolist())]
+            log.debug(f"Calculated comparison for {df_merge.shape[0]} columns")
 
             log.debug(f"Writing results into file: {outfile_fqn}")
             primary_key_col = df_merge.pop("column_name")
