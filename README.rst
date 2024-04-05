@@ -1,31 +1,24 @@
 Tulona
 ======
+A utility to compare tables, espacially useful for migration projects.
 
 |Build Status| |Coverage|
 
 Features
 --------
-* Compare databases
-
-
-Development Environment Setup
------------------------------
-* For live installation execute `pip install --editable core`.
-
-
-Build wheel executable
-----------------------
-* Execute `python -m build` under root dierctory.
-
-Install wheel executable file
------------------------------
-* Execute `pip install <wheel-file.whl>`
+* Profile tables
+* Compare data of tables
+* Compare column column of tables
 
 
 Connection Profiles
 -------------------
-Connection profiles must be setup in `profiles.yml` file and it must be placed under `$HOME/.tulona` dierctory.
-This is how a sample `profiles.yml` looks like:
+Connection profiles is a `yaml` file that will store credentials and other details to connect to the databases/data soruces.
+
+It must be setup in `profiles.yml` file and it must be placed under `$HOME/.tulona` dierctory.
+Create a directory named `.tulona` under your home directory and place `profiles.yml` under it.
+
+This is what a sample `profiles.yml` looks like:
 
 .. code-block:: yaml
 
@@ -61,8 +54,11 @@ This is how a sample `profiles.yml` looks like:
 
 Project Config File
 -------------------
-Project config must be created in `tulona-project.yml` file and this file can be placed anywhere.
-The `output` folder will be create in the same dierctory where `tulona-project.yml` file is present.
+Project config file stores the properties of the tables that need to be compared.
+It must be created in `tulona-project.yml` file and this file can be placed anywhere and that directory will be considered project root directory.
+Which means that the `output`` folder will be created under that directory where all results will be stored.
+It's always a good idea to create an empty directory and store `tulona-project.yml` under it.
+
 This is how a `tulona-project.yml` file looks like:
 
 .. code-block:: yaml
@@ -94,6 +90,27 @@ This is how a `tulona-project.yml` file looks like:
       exclude_columns:
         - phone_number
       compare_column: Employee_ID
+
+
+Sample Commands
+---------------
+* Profile without compare:
+  `tulona profile --datasources <datasource1>,<datasource2>`
+
+
+Development Environment Setup
+-----------------------------
+* For live installation execute `pip install --editable core`.
+
+
+Build wheel executable
+----------------------
+* Execute `python -m build`.
+
+Install wheel executable file
+-----------------------------
+* Execute `pip install <wheel-file.whl>`
+
 
 .. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
