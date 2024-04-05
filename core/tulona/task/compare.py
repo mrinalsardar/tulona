@@ -167,9 +167,9 @@ class CompareDataTask(BaseTask):
 
         # Exclude columns
         log.debug("Excluding columns")
-        if 'exclude_columns' in ds_dict1:
+        if "exclude_columns" in ds_dict1:
             df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
-        if 'exclude_columns' in ds_dict2:
+        if "exclude_columns" in ds_dict2:
             df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
 
         # Compare
@@ -282,7 +282,8 @@ class CompareColumnTask(BaseTask):
                 " at least one of the datasource[project] configs"
                 " (check sample tulona-project.yml file for example)"
                 " or with '--datasources' command line argument"
-                " using one of the following formats (column name is same for option 3 and 4):-"
+                " using one of the following formats"
+                " (column name is same for option 3 and 4):-"
                 " 1. <datasource1>:<col1>,<datasource2>:<col2>"
                 " 2. <datasource1>:<col>,<datasource2>:<col>"
                 " 3. <datasource1>:<col>,<datasource2>"

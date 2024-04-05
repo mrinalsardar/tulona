@@ -203,7 +203,8 @@ def compare_column(ctx, **kwargs):
     at least one of the datasource[project] configs
     (check sample tulona-project.yml file for example)
     or with '--datasources' command line argument
-    using one of the following formats (column name is same for option 3 and 4):-
+    using one of the following formats
+    (column name is same for option 3 and 4):-
     1. <datasource1>:<col1>,<datasource2>:<col2>
     2. <datasource1>:<col>,<datasource2>:<col>
     3. <datasource1>:<col>,<datasource2>
