@@ -56,15 +56,15 @@ def get_metadata_query(database, schema, table):
     if database:
         query = f"""
         select * from information_schema.columns
-        where table_catalog = '{database}'
-        and table_schema = '{schema}'
-        and table_name = '{table}'
+        where upper(table_catalog) = '{database.upper()}'
+        and upper(table_schema) = '{schema.upper()}'
+        and upper(table_name) = '{table.upper()}'
         """
     else:
         query = f"""
         select * from information_schema.columns
-        where table_schema = '{schema}'
-        and table_name = '{table}'
+        where upper(table_schema) = '{schema.upper()}'
+        and upper(table_name) = '{table.upper()}'
         """
     return query
 
@@ -72,7 +72,6 @@ def get_metadata_query(database, schema, table):
 def get_metric_query(
     database, schema, table, columns_dtype: Dict, metrics: list, quoted=False
 ):
-    # TODO: add support for date/timestamp
     numeric_types = [
         "smallint",
         "integer",
@@ -113,6 +112,7 @@ def get_metric_query(
         "timestamp with time zone",  # TODO probably incorrect representation
         "timestamp without time zone",
     ]
+
     numeric_funcs = [
         "min",
         "max",
@@ -122,6 +122,10 @@ def get_metric_query(
     timestamp_funcs = [
         "min",
         "max",
+    ]
+    generic_funcs = [
+        "count",
+        "distinct_count",
     ]
 
     function_map = {
@@ -135,24 +139,19 @@ def get_metric_query(
 
     call_funcs = []
     for col, dtype in columns_dtype.items():
-        if quoted:
-            qp = []
-            for m in metrics:
-                if (m in numeric_funcs and dtype not in numeric_types) or (
-                    m in timestamp_funcs and dtype not in timestamp_types
-                ):
-                    qp.append(f"'NA' as {col}_{m.lower()}")
-                else:
-                    qp.append(function_map[m.lower()].format(f'"{col}"', col))
-        else:
-            qp = []
-            for m in metrics:
-                if (m in numeric_funcs and dtype not in numeric_types) or (
-                    m in timestamp_funcs and dtype not in timestamp_types
-                ):
-                    qp.append(f"'NA' as {col}_{m.lower()}")
-                else:
-                    qp.append(function_map[m.lower()].format(col, col))
+        dtype = dtype.lower()
+        qp = []
+        for m in metrics:
+            if (
+                (m in numeric_funcs and dtype in numeric_types)
+                or (m in timestamp_funcs and dtype in timestamp_types)
+                or (m in generic_funcs)
+            ):
+                qp.append(
+                    function_map[m.lower()].format(f'"{col}"' if quoted else col, col)
+                )
+            else:
+                qp.append(f"'NA' as {col}_{m.lower()}")
         call_funcs.extend(qp)
 
     table_fqn = f"{database if database else ''}{'.' if database else ''}{schema}.{table}"

@@ -72,7 +72,7 @@ class CompareDataTask(BaseTask):
 
     def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         outfile = f"{'_'.join(ds_list)}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
         return outfile_fqn
@@ -167,8 +167,10 @@ class CompareDataTask(BaseTask):
 
         # Exclude columns
         log.debug("Excluding columns")
-        df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
-        df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
+        if "exclude_columns" in ds_dict1:
+            df1 = apply_column_exclusion(df1, ds_dict1, table_name1)
+        if "exclude_columns" in ds_dict2:
+            df2 = apply_column_exclusion(df2, ds_dict2, table_name2)
 
         # Compare
         common_columns = list(
@@ -237,7 +239,7 @@ class CompareColumnTask(BaseTask):
 
     def write_result(self, df, ds1, ds2):
         outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         outfile = f"{ds1}_{ds2}_column_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
 
@@ -276,13 +278,16 @@ class CompareColumnTask(BaseTask):
         else:
             raise TulonaMissingPropertyError(
                 "Column name must be specified for task: compare-column"
-                "either by specifying 'compare_column' property in datasource[project] config"
-                "or with --datasources command line argument"
-                "in one of the following formats (column name is same for option 3 and 4):-"
-                "1. <datasource1>:<col1>,<datasource2>:<col2>"
-                "2. <datasource1>:<col>,<datasource2>:<col>"
-                "3. <datasource1>:<col>,<datasource2>"
-                "4. <datasource1>,<datasource2>:<col>"
+                " either by specifying 'compare_column' property in"
+                " at least one of the datasource[project] configs"
+                " (check sample tulona-project.yml file for example)"
+                " or with '--datasources' command line argument"
+                " using one of the following formats"
+                " (column name is same for option 3 and 4):-"
+                " 1. <datasource1>:<col1>,<datasource2>:<col2>"
+                " 2. <datasource1>:<col>,<datasource2>:<col>"
+                " 3. <datasource1>:<col>,<datasource2>"
+                " 4. <datasource1>,<datasource2>:<col>"
             )
 
         ds_dict1 = self.project["datasources"][datasource1]
