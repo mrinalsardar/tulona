@@ -76,7 +76,7 @@ This is how a `tulona-project.yml` file looks like:
   # This is just the list of data sources, doesn't mean tulona will run tasks for all of them.
   # Datasources need to be picked in the CLI command to run tasks against.
   datasources:
-    postgres_postgres_public_employee:
+    employee_postgres:
       connection_profile: pgdb
       database: postgres
       schema: public
@@ -85,7 +85,7 @@ This is how a `tulona-project.yml` file looks like:
       exclude_columns:
         - name
       compare_column: Employee_ID
-    mysql_db_db_employee:
+    employee_mysql:
       connection_profile: mydb
       database: db
       schema: db

@@ -278,13 +278,15 @@ class CompareColumnTask(BaseTask):
         else:
             raise TulonaMissingPropertyError(
                 "Column name must be specified for task: compare-column"
-                "either by specifying 'compare_column' property in datasource[project] config"
-                "or with --datasources command line argument"
-                "in one of the following formats (column name is same for option 3 and 4):-"
-                "1. <datasource1>:<col1>,<datasource2>:<col2>"
-                "2. <datasource1>:<col>,<datasource2>:<col>"
-                "3. <datasource1>:<col>,<datasource2>"
-                "4. <datasource1>,<datasource2>:<col>"
+                " either by specifying 'compare_column' property in"
+                " at least one of the datasource[project] configs"
+                " (check sample tulona-project.yml file for example)"
+                " or with '--datasources' command line argument"
+                " using one of the following formats (column name is same for option 3 and 4):-"
+                " 1. <datasource1>:<col1>,<datasource2>:<col2>"
+                " 2. <datasource1>:<col>,<datasource2>:<col>"
+                " 3. <datasource1>:<col>,<datasource2>"
+                " 4. <datasource1>,<datasource2>:<col>"
             )
 
         ds_dict1 = self.project["datasources"][datasource1]
