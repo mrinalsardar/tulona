@@ -22,16 +22,16 @@ def highlight_mismatch_pair(excel_file, sheet):
     )
 
     left_border = Border(
-        left=Side(border_style="thick"),
-        right=Side(border_style="thin"),
-        top=Side(border_style="thick"),
-        bottom=Side(border_style="thick"),
+        left=Side(border_style="thin"),
+        right=Side(border_style="dotted"),
+        top=Side(border_style="thin"),
+        bottom=Side(border_style="thin"),
     )
     right_border = Border(
-        left=Side(border_style="thin"),
-        right=Side(border_style="thick"),
-        top=Side(border_style="thick"),
-        bottom=Side(border_style="thick"),
+        left=Side(border_style="dotted"),
+        right=Side(border_style="thin"),
+        top=Side(border_style="thin"),
+        bottom=Side(border_style="thin"),
     )
 
     for row in ws.iter_rows(
@@ -59,24 +59,24 @@ def highlight_mismatch_cells(
     )
 
     left_border = Border(
-        left=Side(border_style="thick"),
-        right=Side(border_style="thin"),
-        top=Side(border_style="thick"),
-        bottom=Side(border_style="thick"),
+        left=Side(border_style="thin"),
+        right=Side(border_style="dotted"),
+        top=Side(border_style="thin"),
+        bottom=Side(border_style="thin"),
     )
 
     middle_border = Border(
-        left=Side(border_style="thin"),
-        right=Side(border_style="thin"),
-        top=Side(border_style="thick"),
-        bottom=Side(border_style="thick"),
+        left=Side(border_style="dotted"),
+        right=Side(border_style="dotted"),
+        top=Side(border_style="thin"),
+        bottom=Side(border_style="thin"),
     )
 
     right_border = Border(
-        left=Side(border_style="thin"),
-        right=Side(border_style="thick"),
-        top=Side(border_style="thick"),
-        bottom=Side(border_style="thick"),
+        left=Side(border_style="dotted"),
+        right=Side(border_style="thin"),
+        top=Side(border_style="thin"),
+        bottom=Side(border_style="thin"),
     )
 
     if skip_columns:
