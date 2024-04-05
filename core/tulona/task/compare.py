@@ -72,7 +72,7 @@ class CompareDataTask(BaseTask):
 
     def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         outfile = f"{'_'.join(ds_list)}_data_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
         return outfile_fqn
@@ -237,7 +237,7 @@ class CompareColumnTask(BaseTask):
 
     def write_result(self, df, ds1, ds2):
         outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         outfile = f"{ds1}_{ds2}_column_comparison_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
 

@@ -37,7 +37,7 @@ class ProfileTask(BaseTask):
 
     def get_outfile_fqn(self, ds_list):
         outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         outfile = f"{'_'.join(ds_list)}_profiles_{out_timestamp}.xlsx"
         outfile_fqn = Path(outdir, outfile)
         return outfile_fqn
@@ -146,16 +146,17 @@ class ProfileTask(BaseTask):
 
         if self.compare:
             log.debug("Preparing metadata comparison")
-            common_columns = set(df_collection[0].columns.tolist())
+            common_columns = {c.lower() for c in df_collection[0].columns.tolist()}
             df_collection_final = []
             for ds_name, df in zip(ds_name_compressed_list, df_collection):
-                common_columns = common_columns.intersection(set(df.columns.tolist()))
+                colset = {c.lower() for c in df.columns.tolist()}
+                common_columns = common_columns.intersection(colset)
 
             for ds_name, df in zip(ds_name_compressed_list, df_collection):
                 df = df[list(common_columns)]
                 df = df.rename(
                     columns={
-                        c: f"{c}_{ds_name}" if c != "column_name" else c
+                        c: f"{c}_{ds_name}" if c.lower() != "column_name" else c.lower()
                         for c in df.columns
                     }
                 )
