@@ -132,6 +132,6 @@ Install wheel executable file
 
 .. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
-.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/branch/main/graph/badge.svg
-   :target: https://codecov.io/gh/mrinalsardar/tulona/branch/main
+.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/graph/badge.svg?token=UGNjjgRskE
+   :target: https://codecov.io/gh/mrinalsardar/tulona
    :alt: Coverage status
