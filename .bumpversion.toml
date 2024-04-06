@@ -15,3 +15,4 @@ commit = false
 message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
 files_to_modify = ["pyproject.toml", "core/setup.py"]
+abc = true
