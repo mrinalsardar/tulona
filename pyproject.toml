@@ -115,12 +115,9 @@ allow_dirty = false
 commit = false
 message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
-files_to_modify = ["pyproject.toml", "core/setup.py"]
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
-search = "version"
 
 [[tool.bumpversion.files]]
 filename = "core/setup.py"
-search = "version"
