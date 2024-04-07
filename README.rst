@@ -2,7 +2,15 @@ Tulona
 ======
 A utility to compare tables, espacially useful perform validations for migration projects.
 
-|Build Status| |Coverage|
+.. list-table::
+   :widths: 25 100
+
+   * - Testing
+     - |CI Test| |Coverage|
+   * - Package
+     - |PyPI Latest Release| |PyPI Downloads|
+   * - Meta
+     - |License Apache-2.0| |Codestyle Black|
 
 
 Connection Profiles
@@ -152,8 +160,16 @@ Install wheel executable file
 * Execute `pip install <wheel-file.whl>`
 
 
-.. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
+.. |CI Test| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
 .. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/graph/badge.svg?token=UGNjjgRskE
    :target: https://codecov.io/gh/mrinalsardar/tulona
    :alt: Coverage status
+.. |PyPI Latest Release| image:: https://img.shields.io/pypi/v/tulona.svg
+   :target: https://pypi.python.org/pypi/tulona/
+.. |PyPI Downloads| image:: https://img.shields.io/pypi/dm/tulona.svg?label=PyPI%20downloads
+   :target: https://pypi.org/project/tulona/
+.. |License Apache-2.0| image:: https://img.shields.io/:license-Apache%202-brightgreen.svg
+   :target: http://www.apache.org/licenses/LICENSE-2.0.txt
+.. |Codestyle Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
