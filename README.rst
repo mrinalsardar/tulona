@@ -164,8 +164,8 @@ Install wheel executable file
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/test.yaml
 .. |Deployment| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
-.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/graph/badge.svg?token=UGNjjgRskE
-   :target: https://codecov.io/gh/mrinalsardar/tulona
+.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/mrinalsardar/tulona/branch/main
    :alt: Coverage status
 .. |PyPI Latest Release| image:: https://img.shields.io/pypi/v/tulona.svg
    :target: https://pypi.python.org/pypi/tulona/
