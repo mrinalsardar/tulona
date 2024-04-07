@@ -116,6 +116,16 @@ Tulona has following commands available:
 
     ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
 
+* **ping**: To test connectivity to the databases for the datasources. Sample command:
+
+  * To ping one data source pass the name to the `--datasources` parameter:
+
+    ``tulona ping --datasources employee_postgres``
+
+  * More than one datasources can be passed to the `--datasources` parameter separated by commas:
+
+    ``tulona ping --datasources employee_postgres,employee_mysql``
+
 * **profile**: To extract and compare metadata of two sources/tables. It includes metadata from `information_schema` related to the tables and some column level metrics (min, max, average, count & distinct_count). Sample commands:
 
   * Profiling without `--compare` flag. It will write metadata and metrics about different sources/tables in different sheets/tabs in the excel file (not a comparison view):
@@ -124,12 +134,6 @@ Tulona has following commands available:
   * Profiling with `--compare` flag. It will produce a comparison view (side by side):
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
-
-* **test-connection**: To test connectivity to the databases for the datasources. Sample command:
-
-  * One or more datasources can be passed to the `--datasources` parameter separated by commas:
-
-    ``tulona test-connection --datasources employee_postgres,employee_mysql``
 
 To know more about any specific command, execute `tulona <command> -h`.
 

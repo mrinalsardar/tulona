@@ -11,7 +11,7 @@ from tulona.task.compare import CompareColumnTask, CompareDataTask
 from tulona.task.profile import ProfileTask
 
 # from tulona.task.scan import ScanTask
-from tulona.task.test_connection import TestConnectionTask
+from tulona.task.ping import PingTask
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -34,19 +34,19 @@ def cli(ctx):
     """Tulona compares data sources to find out differences"""
 
 
-# command: tulona test-connection
-@cli.command("test-connection")
+# command: tulona ping
+@cli.command("ping")
 @click.pass_context
 @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
-def test_connection(ctx, **kwargs):
+def ping(ctx, **kwargs):
     """Test connectivity to datasources"""
 
     if "datasources" not in kwargs:
         raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: test-connection"
+            "--datasources argument must be provided with command: ping"
         )
 
     if kwargs["verbose"]:
@@ -64,7 +64,7 @@ def test_connection(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
-    task = TestConnectionTask(ctx.obj["profile"], ctx.obj["project"], datasource_list)
+    task = PingTask(ctx.obj["profile"], ctx.obj["project"], datasource_list)
     task.execute()
 
 
