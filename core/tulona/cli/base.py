@@ -7,7 +7,7 @@ from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
-from tulona.task.compare import CompareColumnTask, CompareDataTask
+from tulona.task.compare import CompareColumnTask, CompareDataTask, CompareTask
 
 # from tulona.task.scan import ScanTask
 from tulona.task.ping import PingTask
@@ -239,6 +239,52 @@ def compare_column(ctx, **kwargs):
         project=ctx.obj["project"],
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
+    )
+    task.execute()
+
+
+# command: tulona compare
+@cli.command("compare")
+@click.pass_context
+@p.exec_engine
+@p.outdir
+@p.verbose
+@p.datasources
+@p.sample_count
+def compare(ctx, **kwargs):
+    """
+    Compare everything(profiles, rows and columns) for the given datasoures
+    """
+
+    if "datasources" not in kwargs:
+        raise TulonaMissingArgumentError(
+            "--datasources argument must be provided with command: compare-column"
+        )
+
+    if kwargs["verbose"]:
+        # TODO: Fix me
+        # This setting doesn't enable debug level logging
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
+        )
+
+    prof = Profile()
+    proj = Project()
+
+    ctx.obj = ctx.obj or {}
+    ctx.obj["project"] = proj.load_project_config()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+
+    datasource_list = kwargs["datasources"].split(",")
+
+    task = CompareTask(
+        profile=ctx.obj["profile"],
+        project=ctx.obj["project"],
+        runtime=ctx.obj["runtime"],
+        datasources=datasource_list,
+        sample_count=kwargs["sample_count"],
     )
     task.execute()
 

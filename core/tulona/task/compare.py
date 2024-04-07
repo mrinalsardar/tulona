@@ -1,8 +1,6 @@
 import logging
 import time
 from dataclasses import _MISSING_TYPE, dataclass, fields
-from datetime import datetime
-from pathlib import Path
 from typing import Dict, List
 
 import pandas as pd
@@ -10,9 +8,10 @@ import pandas as pd
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
+from tulona.task.helper import create_profile, perform_comparison
 from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.excel import highlight_mismatch_cells
-from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.filesystem import get_outfile_fqn
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.project import extract_table_name_from_config
 from tulona.util.sql import (
@@ -69,13 +68,6 @@ class CompareDataTask(BaseTask):
 
         df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
-
-    def get_outfile_fqn(self, ds_list):
-        outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        outfile = f"{'_'.join(ds_list)}_data_comparison_{out_timestamp}.xlsx"
-        outfile_fqn = Path(outdir, outfile)
-        return outfile_fqn
 
     def execute(self):
         log.info("Starting task: Compare")
@@ -199,7 +191,10 @@ class CompareDataTask(BaseTask):
 
         df_merge = df_merge[sorted(df_merge.columns.tolist())]
 
-        outfile_fqn = self.get_outfile_fqn([ds1_compressed, ds2_compressed])
+        ds_name_compressed_list = [ds1_compressed, ds2_compressed]
+        outfile_fqn = get_outfile_fqn(
+            self.project["outdir"], ds_name_compressed_list, "data_comparison"
+        )
         log.debug("Writing comparison result into: {outfile_fqn}")
         df_merge.to_excel(outfile_fqn, sheet_name="Data Comparison", index=False)
 
@@ -236,15 +231,6 @@ class CompareColumnTask(BaseTask):
             query = get_column_query(table, column, quoted=True)
             df = get_query_output_as_df(connection_manager=conman, query_text=query)
         return df
-
-    def write_result(self, df, ds1, ds2):
-        outdir = create_dir_if_not_exist(self.project["outdir"])
-        out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        outfile = f"{ds1}_{ds2}_column_comparison_{out_timestamp}.xlsx"
-        outfile_fqn = Path(outdir, outfile)
-
-        log.debug(f"Writing output into: {outfile_fqn}")
-        df.to_excel(outfile_fqn, sheet_name="Column Comparison", index=False)
 
     def execute(self):
         log.info("Starting task: compare-column")
@@ -326,9 +312,128 @@ class CompareColumnTask(BaseTask):
         )
         df_merge = df_merge[df_merge["presence"] != "both"]
 
-        log.debug("Writing comparison result")
-        self.write_result(df_merge, ds1_compressed, ds2_compressed)
+        ds_name_compressed_list = [ds1_compressed, ds2_compressed]
+        outfile_fqn = get_outfile_fqn(
+            self.project["outdir"], ds_name_compressed_list, "column_comparison"
+        )
+        log.debug(f"Writing output into: {outfile_fqn}")
+        df_merge.to_excel(outfile_fqn, sheet_name="Column Comparison", index=False)
 
         end_time = time.time()
         log.info("Finished task: compare-column")
+        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+
+
+@dataclass
+class CompareTask(BaseTask):
+    profile: Dict
+    project: Dict
+    runtime: RunConfig
+    datasources: List[str]
+    sample_count: int = DEFAULT_VALUES["sample_count"]
+
+    # Support for default values
+    def __post_init__(self):
+        for field in fields(self):
+            # If there is a default and the value of the field is none we can assign a value
+            if (
+                not isinstance(field.default, _MISSING_TYPE)
+                and getattr(self, field.name) is None
+            ):
+                setattr(self, field.name, field.default)
+
+    def execute(self):
+        log.info("Starting task: compare")
+        start_time = time.time()
+
+        if len(self.datasources) < 2:
+            raise ValueError("Comparison needs at least two data sources.")
+
+        # --------------- Data collection from sources
+        df_collection = []
+        ds_name_compressed_list = []
+        for ds_name in self.datasources:
+            log.debug(f"Extracting configs for: {ds_name}")
+            # Extract data source name from datasource:column combination
+            ds_name = ds_name.split(":")[0]
+            ds_name_compressed = ds_name.replace("_", "")
+            ds_name_compressed_list.append(ds_name_compressed)
+
+            ds_config = self.project["datasources"][ds_name]
+            dbtype = self.profile["profiles"][
+                extract_profile_name(self.project, ds_name)
+            ]["type"]
+
+            # MySQL doesn't have logical database
+            if "database" in ds_config and dbtype.lower() != "mysql":
+                database = ds_config["database"]
+            else:
+                database = None
+            schema = ds_config["schema"]
+            table = ds_config["table"]
+
+            log.debug(f"Acquiring connection to the database of: {ds_name}")
+            connection_profile = get_connection_profile(
+                self.profile, self.project, ds_name
+            )
+            conman = self.get_connection_manager(conn_profile=connection_profile)
+
+            # Profile data
+            log.info(f"Profiling {ds_name}")
+            metrics = [
+                "min",
+                "max",
+                "avg",
+                "count",
+                "distinct_count",
+            ]
+            df = create_profile(database, schema, table, metrics, conman)
+            df_collection.append(df)
+
+            # Row data
+
+            # Column data
+
+        # --------------- Comparison
+        comparisons = {}
+
+        # Profile comparison
+        log.debug("Preparing metadata comparison")
+        df_profiles = perform_comparison(
+            ds_name_compressed_list, df_collection, "column_name"
+        )
+        comparisons["profiles"] = {
+            "primary_key": "column_name",
+            "data": df_profiles,
+            "num_sources": len(ds_name_compressed_list),
+        }
+        log.debug(f"Prepared comparison for {df_profiles.shape[0]} columns")
+
+        # Row comparison
+
+        # Column comparison
+
+        outfile_fqn = get_outfile_fqn(
+            self.project["outdir"], ds_name_compressed_list, "comparison"
+        )
+        log.debug(f"Writing results into file: {outfile_fqn}")
+        with pd.ExcelWriter(outfile_fqn) as writer:
+            for sheet, content in comparisons.items():
+                primary_key_series = content["data"].pop(content["primary_key"])
+                content["data"].insert(
+                    loc=0, column=content["primary_key"], value=primary_key_series
+                )
+                content["data"].to_excel(writer, sheet_name=sheet, index=False)
+
+        log.debug("Highlighting mismtach cells")
+        for sheet, content in comparisons.items():
+            highlight_mismatch_cells(
+                excel_file=outfile_fqn,
+                sheet=sheet,
+                num_ds=content["num_sources"],
+                skip_columns=content["primary_key"],
+            )
+
+        end_time = time.time()
+        log.info("Finished task: compare")
         log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
