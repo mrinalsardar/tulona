@@ -8,10 +8,10 @@ from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
 from tulona.task.compare import CompareColumnTask, CompareDataTask
-from tulona.task.profile import ProfileTask
 
 # from tulona.task.scan import ScanTask
 from tulona.task.ping import PingTask
+from tulona.task.profile import ProfileTask
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
