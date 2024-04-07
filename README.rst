@@ -1,8 +1,16 @@
 Tulona
 ======
-A utility to compare tables, espacially useful perform validations for migration projects.
+A utility to compare tables, espacially useful to perform validations for migration projects.
 
-|Build Status| |Coverage|
+.. list-table::
+   :widths: 25 100
+
+   * - Testing
+     - |CI Test| |Coverage|
+   * - Package
+     - |PyPI Latest Release| |PyPI Downloads|
+   * - Meta
+     - |License Apache-2.0| |Codestyle Black|
 
 
 Connection Profiles
@@ -116,6 +124,16 @@ Tulona has following commands available:
 
     ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
 
+* **ping**: To test connectivity to the databases for the datasources. Sample command:
+
+  * To ping one data source pass the name to the `--datasources` parameter:
+
+    ``tulona ping --datasources employee_postgres``
+
+  * More than one datasources can be passed to the `--datasources` parameter separated by commas:
+
+    ``tulona ping --datasources employee_postgres,employee_mysql``
+
 * **profile**: To extract and compare metadata of two sources/tables. It includes metadata from `information_schema` related to the tables and some column level metrics (min, max, average, count & distinct_count). Sample commands:
 
   * Profiling without `--compare` flag. It will write metadata and metrics about different sources/tables in different sheets/tabs in the excel file (not a comparison view):
@@ -124,12 +142,6 @@ Tulona has following commands available:
   * Profiling with `--compare` flag. It will produce a comparison view (side by side):
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
-
-* **test-connection**: To test connectivity to the databases for the datasources. Sample command:
-
-  * One or more datasources can be passed to the `--datasources` parameter separated by commas:
-
-    ``tulona test-connection --datasources employee_postgres,employee_mysql``
 
 To know more about any specific command, execute `tulona <command> -h`.
 
@@ -148,8 +160,16 @@ Install wheel executable file
 * Execute `pip install <wheel-file.whl>`
 
 
-.. |Build Status| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
+.. |CI Test| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
 .. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/graph/badge.svg?token=UGNjjgRskE
    :target: https://codecov.io/gh/mrinalsardar/tulona
    :alt: Coverage status
+.. |PyPI Latest Release| image:: https://img.shields.io/pypi/v/tulona.svg
+   :target: https://pypi.python.org/pypi/tulona/
+.. |PyPI Downloads| image:: https://img.shields.io/pypi/dm/tulona.svg?label=PyPI%20downloads
+   :target: https://pypi.org/project/tulona/
+.. |License Apache-2.0| image:: https://img.shields.io/:license-Apache%202-brightgreen.svg
+   :target: http://www.apache.org/licenses/LICENSE-2.0.txt
+.. |Codestyle Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black

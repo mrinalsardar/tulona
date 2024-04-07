@@ -10,14 +10,14 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class TestConnectionTask(BaseTask):
+class PingTask(BaseTask):
     profile: Dict
     project: Dict
     datasources: List[str]
 
     def execute(self):
 
-        log.info("Starting task: Test Connection")
+        log.info("Starting task: Ping")
         start_time = time.time()
 
         for ds in self.datasources:
@@ -36,5 +36,5 @@ class TestConnectionTask(BaseTask):
                 log.error(f"Connection to data source {ds} failed because of: {exp}")
 
         end_time = time.time()
-        log.info("Finished task: Test Connection")
-        log.info(f"Total time taken: {end_time - start_time} seconds")
+        log.info("Finished task: Ping")
+        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
