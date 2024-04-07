@@ -3,7 +3,7 @@ Tulona
 A utility to compare tables, espacially useful to perform validations for migration projects.
 
 .. list-table::
-   :widths: 25 100
+   :widths: 50 150
 
    * - Testing
      - |CI Test| |Coverage|
