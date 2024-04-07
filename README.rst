@@ -3,10 +3,10 @@ Tulona
 A utility to compare tables, espacially useful to perform validations for migration projects.
 
 .. list-table::
-   :widths: 50 150
+   :widths: 50 200
 
    * - Testing
-     - |CI Test| |Coverage|
+     - |CI Test| |Deployment| |Coverage|
    * - Package
      - |PyPI Latest Release| |PyPI Downloads|
    * - Meta
@@ -160,7 +160,9 @@ Install wheel executable file
 * Execute `pip install <wheel-file.whl>`
 
 
-.. |CI Test| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
+.. |CI Test| image:: https://github.com/mrinalsardar/tulona/actions/workflows/test.yaml/badge.svg
+   :target: https://github.com/mrinalsardar/tulona/actions/workflows/test.yaml
+.. |Deployment| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
 .. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/graph/badge.svg?token=UGNjjgRskE
    :target: https://codecov.io/gh/mrinalsardar/tulona
