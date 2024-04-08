@@ -3,6 +3,7 @@ tulona-project.yml
 tulona-project.yaml
 **/*.egg*
 .DS_Store
+.idea
 .vscode
 *.pyc
 output
