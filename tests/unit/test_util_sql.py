@@ -139,13 +139,11 @@ def test_get_metadata_query(database, schema, table, expected):
 
 
 @pytest.mark.parametrize(
-    "database,schema,table,columns_dtype,metrics,quoted,expected",
+    "table_fqn,columns_dtype,metrics,quoted,expected",
     [
         # numeric function - numeric column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Age": "bigint",
             },
@@ -161,9 +159,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # timestamp function - timestamp column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Date_of_Birth": "datetime",
             },
@@ -179,9 +175,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # strictly numeric function - numeric column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Age": "bigint",
             },
@@ -197,9 +191,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # unsupported function - timestamp column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Date_of_Birth": "datetime",
             },
@@ -215,9 +207,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # unsupported function - non numeric/timestamp column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Address": "text",
             },
@@ -233,9 +223,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # unsupported function - non numeric/timestamp column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Address": "text",
             },
@@ -251,9 +239,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # generic function - numeric column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Age": "bigint",
             },
@@ -269,9 +255,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # generic function - timestamp column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Date_of_Birth": "datetime",
             },
@@ -287,9 +271,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # generic function - non mumeric/timestamp column
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Address": "text",
             },
@@ -305,9 +287,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # generic function - non mumeric/timestamp column [quoted]
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Address": "text",
             },
@@ -323,9 +303,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # no database (mysql)
         (
-            None,
-            "schema",
-            "table",
+            "schema.table",
             {
                 "Address": "text",
             },
@@ -341,9 +319,7 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
         # unsupported function-datatype, quoting doesn't matter
         (
-            "database",
-            "schema",
-            "table",
+            "database.schema.table",
             {
                 "Address": "text",
             },
@@ -359,8 +335,6 @@ def test_get_metadata_query(database, schema, table, expected):
         ),
     ],
 )
-def test_get_metric_query(
-    database, schema, table, columns_dtype, metrics, quoted, expected
-):
-    query = get_metric_query(database, schema, table, columns_dtype, metrics, quoted)
+def test_get_metric_query(table_fqn, columns_dtype, metrics, quoted, expected):
+    query = get_metric_query(table_fqn, columns_dtype, metrics, quoted)
     assert query == expected

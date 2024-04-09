@@ -81,7 +81,7 @@ def highlight_mismatch_cells(
 
     if skip_columns:
         skip_columns = skip_columns if isinstance(skip_columns, list) else [skip_columns]
-        skip_idxs = [get_column_index(ws, c) - 1 for c in skip_columns]
+        skip_idxs = [get_column_index(ws, c.lower()) - 1 for c in skip_columns]
         compareable_col_idxs = list(set(range(ws.max_column)) - set(skip_idxs))
     else:
         compareable_col_idxs = list(range(ws.max_column))

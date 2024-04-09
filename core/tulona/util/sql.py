@@ -5,6 +5,11 @@ import pandas as pd
 from tulona.exceptions import TulonaNotImplementedError
 
 
+def get_table_fqn(database: str, schema: str, table: str) -> str:
+    table_fqn = f"{database + '.' if database else ''}{schema}.{table}"
+    return table_fqn
+
+
 def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
     dbtype = dbtype.lower()
 
@@ -40,14 +45,16 @@ def get_query_output_as_df(connection_manager, query_text: str):
     return df
 
 
-def build_filter_query_expression(df: pd.DataFrame, primary_key: str):
+def build_filter_query_expression(
+    df: pd.DataFrame, primary_key: str, positive: bool = True
+):
     primary_keys = df[primary_key].tolist()
 
     if "int" in str(df[primary_key].dtype):
         primary_keys = [str(k) for k in primary_keys]
-        query_expr = f"""{primary_key} in ({", ".join(primary_keys)})"""
+        query_expr = f"""{primary_key}{'' if positive else ' not'} in ({", ".join(primary_keys)})"""
     else:
-        query_expr = f"""{primary_key} in ('{"', '".join(primary_keys)}')"""
+        query_expr = f"""{primary_key}{'' if positive else ' not'} in ('{"', '".join(primary_keys)}')"""
 
     return query_expr
 
@@ -69,9 +76,7 @@ def get_metadata_query(database, schema, table):
     return query
 
 
-def get_metric_query(
-    database, schema, table, columns_dtype: Dict, metrics: list, quoted=False
-):
+def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False):
     numeric_types = [
         "smallint",
         "integer",
@@ -154,12 +159,20 @@ def get_metric_query(
                 qp.append(f"'NA' as {col}_{m.lower()}")
         call_funcs.extend(qp)
 
-    table_fqn = f"{database if database else ''}{'.' if database else ''}{schema}.{table}"
-
     query = f"""
     select
         {", ".join(call_funcs)}
     from {table_fqn}
     """
 
+    return query
+
+
+def get_table_data_query(conman, dbtype, table_fqn, sample_count, query_expr: str = None):
+    if query_expr:
+        query = f"select * from {table_fqn} where {query_expr}"
+    else:
+        query = get_sample_row_query(
+            dbtype=dbtype, table_name=table_fqn, sample_count=sample_count
+        )
     return query

@@ -1,6 +1,7 @@
 from typing import Dict
 
 
+# TODO: probably obsolete
 def extract_table_name_from_config(config: Dict, dbtype: str):
     dbtype = dbtype.lower()
     if dbtype in ("snowflake", "mssql", "postgres"):

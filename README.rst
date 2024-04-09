@@ -100,30 +100,6 @@ All commands take one mandatory parameter, `--datasources`, a comma separated li
 
 Tulona has following commands available:
 
-* **compare-column**: To compare columns from tables from two sources/tables. This is expecially useful when you want see if all the rows from one table/source is present in the other one by comparing the primary/unique key. The result will be an excel file with extra primary/unique keys from both sides. If both have the same set of primary/unique keys, essentially means they have the same rows, excel file will be empty. Command samples:
-
-  * Column[s] to compare is[are] specified in at least one of the datasource config in `tulona-project.yml` file with `compare_column` property:
-
-    ``tulona compare-column --datasources employee_postgres,employee_mysql``
-  * Column[s] to compare may/may not be specified in the datasource config in `tulona-project.yml` file with `compare_column` property(command line takes preference). In the command, column name is specified with the first data source, separated by colon(:):
-
-    ``tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql``
-  * Column[s] to compare may/may not be specified in the datasource config in `tulona-project.yml` file with `compare_column` property(command line takes preference). In the command, column name is specified with the second data source, separated by colon(:):
-
-    ``tulona compare-column --datasources employee_postgres,employee_mysql:Employee_ID``
-  * Column[s] to compare may/may not be specified in the datasource config in `tulona-project.yml` file with `compare_column` property(command line takes preference). In the command, column name is specified with both data sources, separated by colon(:):
-
-    ``tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql:Employee_ID``
-
-* **compare-data**: To compare sample data from two sources/tables. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
-
-  * Command without `--sample-count` parameter:
-
-    ``tulona compare-data --datasources employee_postgres,employee_mysql``
-  * Command with `--sample-count` parameter:
-
-    ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
-
 * **ping**: To test connectivity to the databases for the datasources. Sample command:
 
   * To ping one data source pass the name to the `--datasources` parameter:
@@ -142,6 +118,36 @@ Tulona has following commands available:
   * Profiling with `--compare` flag. It will produce a comparison view (side by side):
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
+
+* **compare-data**: To compare sample data from two sources/tables. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
+
+  * Command without `--sample-count` parameter:
+
+    ``tulona compare-data --datasources employee_postgres,employee_mysql``
+  * Command with `--sample-count` parameter:
+
+    ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
+
+* **compare-column**: To compare columns from tables from two sources/tables. This is expecially useful when you want see if all the rows from one table/source is present in the other one by comparing the primary/unique key. The result will be an excel file with extra primary/unique keys from both sides. If both have the same set of primary/unique keys, essentially means they have the same rows, excel file will be empty. Command samples:
+
+  * Column[s] to compare is[are] specified in at least one of the datasource config in `tulona-project.yml` file with `compare_column` property:
+
+    ``tulona compare-column --datasources employee_postgres,employee_mysql``
+  * Column[s] to compare may/may not be specified in the datasource config in `tulona-project.yml` file with `compare_column` property(command line takes preference). In the command, column name is specified with the first data source, separated by colon(:):
+
+    ``tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql``
+  * Column[s] to compare may/may not be specified in the datasource config in `tulona-project.yml` file with `compare_column` property(command line takes preference). In the command, column name is specified with the second data source, separated by colon(:):
+
+    ``tulona compare-column --datasources employee_postgres,employee_mysql:Employee_ID``
+  * Column[s] to compare may/may not be specified in the datasource config in `tulona-project.yml` file with `compare_column` property(command line takes preference). In the command, column name is specified with both data sources, separated by colon(:):
+
+    ``tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql:Employee_ID``
+
+* **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. It will prepare comparison of everything and write them into different sheets of a single excel file. Sample command:
+
+  ``tulona compare --datasources employee_postgres,employee_mysql``
+
+For debug level log, add `-v` or `--verbose` flag along with any command. For example: ``tulona ping -v --datasources employee_postgres``
 
 To know more about any specific command, execute `tulona <command> -h`.
 
@@ -164,8 +170,8 @@ Install wheel executable file
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/test.yaml
 .. |Deployment| image:: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml/badge.svg
    :target: https://github.com/mrinalsardar/tulona/actions/workflows/publish.yaml
-.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/graph/badge.svg?token=UGNjjgRskE
-   :target: https://codecov.io/gh/mrinalsardar/tulona
+.. |Coverage| image:: https://codecov.io/gh/mrinalsardar/tulona/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/mrinalsardar/tulona/branch/main
    :alt: Coverage status
 .. |PyPI Latest Release| image:: https://img.shields.io/pypi/v/tulona.svg
    :target: https://pypi.python.org/pypi/tulona/
