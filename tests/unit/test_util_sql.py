@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+
 from tulona.exceptions import TulonaNotImplementedError
 from tulona.util.sql import (
     build_filter_query_expression,
