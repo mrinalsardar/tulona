@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
+
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
 from tulona.task.helper import create_profile, perform_comparison
@@ -37,7 +38,7 @@ class ProfileTask(BaseTask):
 
     def execute(self):
 
-        log.info("Starting task: profiling")
+        log.info("------------------------ Starting task: profile")
         start_time = time.time()
 
         df_collection = []
@@ -111,5 +112,5 @@ class ProfileTask(BaseTask):
                     df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
 
         end_time = time.time()
-        log.info("Finished task: profiling")
+        log.info("------------------------ Finished task: profile")
         log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")

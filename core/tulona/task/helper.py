@@ -1,16 +1,13 @@
 import logging
-from typing import List, Union
+from typing import List
 
 import pandas as pd
 
 from tulona.adapter.connection import ConnectionManager
-from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.sql import (
-    build_filter_query_expression,
     get_metadata_query,
     get_metric_query,
     get_query_output_as_df,
-    get_table_data,
     get_table_fqn,
 )
 
@@ -74,68 +71,6 @@ def create_profile(
     df = pd.merge(left=df_meta, right=df_metric, how="inner", on="column_name")
 
     return df
-
-
-def extract_rows(
-    dbtype1: str,
-    table_fqn1: str,
-    conman1: ConnectionManager,
-    exclude_columns1: List[str],
-    dbtype2: str,
-    table_fqn2: str,
-    conman2: ConnectionManager,
-    exclude_columns2: List[str],
-    primary_key: str,
-    sample_count: int,
-) -> Union[List[pd.DataFrame], None]:
-    # TODO: push column exclusion down to the database/query
-
-    primary_key = primary_key.lower()
-    query_expr = None
-
-    i = 0
-    while i < 5:
-        log.debug(f"Extraction iteration: {i + 1}")
-
-        df1 = get_table_data(conman1, dbtype1, table_fqn1, sample_count, query_expr)
-        if df1.shape[0] == 0:
-            raise ValueError(f"Table {table_fqn1} doesn't have any data")
-
-        df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
-        if primary_key not in df1.columns.tolist():
-            raise ValueError(f"Primary key {primary_key} not present in {table_fqn2}")
-
-        # Exclude columns
-        log.debug(f"Excluding columns from {table_fqn1}")
-        if len(exclude_columns1):
-            df1 = apply_column_exclusion(df1, primary_key, exclude_columns1, table_fqn1)
-
-        df2 = get_table_data(
-            conman2,
-            dbtype2,
-            table_fqn2,
-            sample_count,
-            query_expr=build_filter_query_expression(df1, primary_key),
-        )
-        df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
-
-        if primary_key not in df2.columns.tolist():
-            raise ValueError(f"Primary key {primary_key} not present in {table_fqn2}")
-
-        # Exclude columns
-        log.debug(f"Excluding columns from {table_fqn2}")
-        if len(exclude_columns2):
-            df2 = apply_column_exclusion(df2, primary_key, exclude_columns2, table_fqn2)
-
-        if df2.shape[0] > 0:
-            df1 = df1[df1[primary_key].isin(df2[primary_key].tolist())]
-            return [df1, df2]
-        else:
-            query_expr = build_filter_query_expression(df1, primary_key, positive=False)
-
-        i += 1
-
-    raise ValueError(f"Could not find common data between {table_fqn1} and {table_fqn2}")
 
 
 # TODO: common param to toggle comparison result for common vs all columns

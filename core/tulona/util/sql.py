@@ -168,13 +168,11 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
     return query
 
 
-def get_table_data(conman, dbtype, table_fqn, sample_count, query_expr: str = None):
+def get_table_data_query(conman, dbtype, table_fqn, sample_count, query_expr: str = None):
     if query_expr:
         query = f"select * from {table_fqn} where {query_expr}"
     else:
         query = get_sample_row_query(
             dbtype=dbtype, table_name=table_fqn, sample_count=sample_count
         )
-
-    df = get_query_output_as_df(connection_manager=conman, query_text=query)
-    return df
+    return query

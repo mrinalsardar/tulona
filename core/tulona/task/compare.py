@@ -10,13 +10,20 @@ import pandas as pd
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
-from tulona.task.helper import extract_rows, perform_comparison
+from tulona.task.helper import perform_comparison
 from tulona.task.profile import ProfileTask
+from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.project import extract_table_name_from_config
-from tulona.util.sql import get_column_query, get_query_output_as_df, get_table_fqn
+from tulona.util.sql import (
+    build_filter_query_expression,
+    get_column_query,
+    get_query_output_as_df,
+    get_table_data_query,
+    get_table_fqn,
+)
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +52,7 @@ class CompareDataTask(BaseTask):
                 setattr(self, field.name, field.default)
 
     def execute(self):
-        log.info("Starting task: compare-data")
+        log.info("------------------------ Starting task: compare-data")
         start_time = time.time()
 
         if len(self.datasources) != 2:
@@ -132,18 +139,71 @@ class CompareDataTask(BaseTask):
         exclude_columns1, exclude_columns2 = exclude_columns_lol
 
         log.info("Extracting row data")
-        row_data_list = extract_rows(
-            dbtype1=dbtype1,
-            table_fqn1=table_fqn1,
-            conman1=conman1,
-            exclude_columns1=exclude_columns1,
-            dbtype2=dbtype2,
-            table_fqn2=table_fqn2,
-            conman2=conman2,
-            exclude_columns2=exclude_columns2,
-            primary_key=primary_key,
-            sample_count=self.sample_count,
-        )
+        # TODO: push column exclusion down to the database/query
+        primary_key = primary_key.lower()
+        query_expr = None
+
+        i = 0
+        while i < 5:
+            log.debug(f"Extraction iteration: {i + 1}/5")
+
+            query1 = get_table_data_query(
+                conman1, dbtype1, table_fqn1, self.sample_count, query_expr
+            )
+            if self.sample_count < 51:
+                log.debug(f"Executing query: {query1}")
+            df1 = get_query_output_as_df(connection_manager=conman1, query_text=query1)
+            if df1.shape[0] == 0:
+                raise ValueError(f"Table {table_fqn1} doesn't have any data")
+
+            df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
+            if primary_key not in df1.columns.tolist():
+                raise ValueError(f"Primary key {primary_key} not present in {table_fqn2}")
+
+            # Exclude columns
+            log.debug(f"Excluding columns from {table_fqn1}")
+            if len(exclude_columns1):
+                df1 = apply_column_exclusion(
+                    df1, primary_key, exclude_columns1, table_fqn1
+                )
+
+            query2 = get_table_data_query(
+                conman2,
+                dbtype2,
+                table_fqn2,
+                self.sample_count,
+                query_expr=build_filter_query_expression(df1, primary_key),
+            )
+            if self.sample_count < 51:
+                log.debug(f"Executing query: {query2}")
+            df2 = get_query_output_as_df(connection_manager=conman2, query_text=query2)
+            df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
+
+            if primary_key not in df2.columns.tolist():
+                raise ValueError(f"Primary key {primary_key} not present in {table_fqn2}")
+
+            # Exclude columns
+            log.debug(f"Excluding columns from {table_fqn2}")
+            if len(exclude_columns2):
+                df2 = apply_column_exclusion(
+                    df2, primary_key, exclude_columns2, table_fqn2
+                )
+
+            if df2.shape[0] > 0:
+                df1 = df1[df1[primary_key].isin(df2[primary_key].tolist())]
+                row_data_list = [df1, df2]
+                break
+            else:
+                query_expr = build_filter_query_expression(
+                    df1, primary_key, positive=False
+                )
+
+            i += 1
+
+        if df2.shape[0] == 0:
+            raise ValueError(
+                f"Could not find common data between {table_fqn1} and {table_fqn2}"
+            )
 
         log.debug("Preparing row comparison")
         df_row_comp = perform_comparison(
@@ -167,7 +227,7 @@ class CompareDataTask(BaseTask):
         )
 
         end_time = time.time()
-        log.info("Finished task: compare-data")
+        log.info("------------------------ Finished task: compare-data")
         log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
 
 
@@ -197,7 +257,7 @@ class CompareColumnTask(BaseTask):
         return df
 
     def execute(self):
-        log.info("Starting task: compare-column")
+        log.info("------------------------ Starting task: compare-column")
         start_time = time.time()
 
         if len(self.datasources) != 2:
@@ -285,7 +345,7 @@ class CompareColumnTask(BaseTask):
             df_merge.to_excel(writer, sheet_name="Column Comparison", index=False)
 
         end_time = time.time()
-        log.info("Finished task: compare-column")
+        log.info("------------------------ Finished task: compare-column")
         log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
 
 
@@ -309,7 +369,7 @@ class CompareTask(BaseTask):
                 setattr(self, field.name, field.default)
 
     def execute(self):
-        log.info("Starting task: compare")
+        log.info("------------------------ Starting task: compare")
         start_time = time.time()
 
         # Metadata comparison
@@ -342,5 +402,7 @@ class CompareTask(BaseTask):
         ).execute()
 
         end_time = time.time()
-        log.info("Finished task: compare")
-        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+        log.info("------------------------ Finished task: compare")
+        log.info(
+            f"Total time taken [profile, compare-data, compare-column]: {(end_time - start_time):.2f} seconds"
+        )
