@@ -16,7 +16,7 @@ from tulona.util.filesystem import get_outfile_fqn
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.DEBUG,  # TODO: Set level to INFO once verbosity is fixed
+    level=logging.INFO,
     format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
 
@@ -38,23 +38,20 @@ def cli(ctx):
 # command: tulona ping
 @cli.command("ping")
 @click.pass_context
-@p.exec_engine
+# @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
 def ping(ctx, **kwargs):
     """Test connectivity to datasources"""
 
-    if "datasources" not in kwargs:
+    if not kwargs["datasources"]:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: ping"
         )
 
     if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        logging.getLogger("tulona").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()
@@ -76,7 +73,7 @@ def ping(ctx, **kwargs):
 # command: tulona profile
 @cli.command("profile")
 @click.pass_context
-@p.exec_engine
+# @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
@@ -84,16 +81,13 @@ def ping(ctx, **kwargs):
 def profile(ctx, **kwargs):
     """Profile data sources to collect metadata [row count, column min/max/mean etc.]"""
 
-    if "datasources" not in kwargs:
+    if not kwargs["datasources"]:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: profile"
         )
 
     if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        logging.getLogger("tulona").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()
@@ -104,6 +98,10 @@ def profile(ctx, **kwargs):
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
     datasource_list = kwargs["datasources"].split(",")
+
+    # Override config outdir if provided in command line
+    if kwargs["outdir"]:
+        ctx.obj["project"]["outdir"] = kwargs["outdir"]
     outfile_fqn = get_outfile_fqn(
         outdir=ctx.obj["project"]["outdir"],
         ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
@@ -124,7 +122,7 @@ def profile(ctx, **kwargs):
 # command: tulona compare-data
 @cli.command("compare-data")
 @click.pass_context
-@p.exec_engine
+# @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
@@ -132,18 +130,13 @@ def profile(ctx, **kwargs):
 def compare_data(ctx, **kwargs):
     """Compares two data entities"""
 
-    if "datasources" not in kwargs:
+    if not kwargs["datasources"]:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: compare-data"
         )
 
     if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
-        )
+        logging.getLogger("tulona").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()
@@ -155,6 +148,9 @@ def compare_data(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
+    # Override config outdir if provided in command line
+    if kwargs["outdir"]:
+        ctx.obj["project"]["outdir"] = kwargs["outdir"]
     outfile_fqn = get_outfile_fqn(
         outdir=ctx.obj["project"]["outdir"],
         ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
@@ -175,7 +171,7 @@ def compare_data(ctx, **kwargs):
 # command: tulona compare-column
 @cli.command("compare-column")
 @click.pass_context
-@p.exec_engine
+# @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
@@ -194,18 +190,13 @@ def compare_column(ctx, **kwargs):
     4. <datasource1>,<datasource2>:<col>
     """
 
-    if "datasources" not in kwargs:
+    if not kwargs["datasources"]:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: compare-column"
         )
 
     if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
-        )
+        logging.getLogger("tulona").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()
@@ -217,6 +208,9 @@ def compare_column(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
+    # Override config outdir if provided in command line
+    if kwargs["outdir"]:
+        ctx.obj["project"]["outdir"] = kwargs["outdir"]
     outfile_fqn = get_outfile_fqn(
         outdir=ctx.obj["project"]["outdir"],
         ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
@@ -236,7 +230,7 @@ def compare_column(ctx, **kwargs):
 # command: tulona compare
 @cli.command("compare")
 @click.pass_context
-@p.exec_engine
+# @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
@@ -246,18 +240,13 @@ def compare(ctx, **kwargs):
     Compare everything(profiles, rows and columns) for the given datasoures
     """
 
-    if "datasources" not in kwargs:
+    if not kwargs["datasources"]:
         raise TulonaMissingArgumentError(
             "--datasources argument must be provided with command: compare-column"
         )
 
     if kwargs["verbose"]:
-        # TODO: Fix me
-        # This setting doesn't enable debug level logging
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
-        )
+        logging.getLogger("tulona").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()
@@ -269,6 +258,9 @@ def compare(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
+    # Override config outdir if provided in command line
+    if kwargs["outdir"]:
+        ctx.obj["project"]["outdir"] = kwargs["outdir"]
     outfile_fqn = get_outfile_fqn(
         outdir=ctx.obj["project"]["outdir"],
         ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
