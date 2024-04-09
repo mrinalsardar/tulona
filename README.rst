@@ -143,7 +143,7 @@ Tulona has following commands available:
 
     ``tulona compare-column --datasources employee_postgres:Employee_ID,employee_mysql:Employee_ID``
 
-* **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. For example:
+* **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. It will prepare comparison of everything and write them into different sheets of a single excel file. Sample command:
 
   ``tulona compare --datasources employee_postgres,employee_mysql``
 
