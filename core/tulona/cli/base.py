@@ -12,6 +12,7 @@ from tulona.task.compare import CompareColumnTask, CompareDataTask, CompareTask
 # from tulona.task.scan import ScanTask
 from tulona.task.ping import PingTask
 from tulona.task.profile import ProfileTask
+from tulona.util.filesystem import get_outfile_fqn
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -64,43 +65,12 @@ def ping(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
-    task = PingTask(ctx.obj["profile"], ctx.obj["project"], datasource_list)
+    task = PingTask(
+        profile=ctx.obj["profile"],
+        project=ctx.obj["project"],
+        datasources=datasource_list,
+    )
     task.execute()
-
-
-# # command: tulona scan
-# @cli.command("scan")
-# @click.pass_context
-# @p.exec_engine
-# @p.outdir
-# @p.verbose
-# @p.datasources
-# def scan(ctx, **kwargs):
-#     """Scans data sources for schemas, tables, columns etc."""
-
-#     if "datasources" not in kwargs:
-#         raise TulonaMissingArgumentError(
-#             "--datasources argument must be provided with command: scan"
-#         )
-
-#     if kwargs["verbose"]:
-#         # TODO: Fix me
-#         # This setting doesn't enable debug level logging
-#         handler = logging.StreamHandler()
-#         handler.setLevel(logging.DEBUG)
-
-#     prof = Profile()
-#     proj = Project()
-
-#     ctx.obj = ctx.obj or {}
-#     ctx.obj["project"] = proj.load_project_config()
-#     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-#     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-#     datasource_list = kwargs["datasources"].split(",")
-
-#     task = ScanTask(ctx.obj["profile"], ctx.obj["project"], ctx.obj["runtime"], datasource_list)
-#     task.execute()
 
 
 # command: tulona profile
@@ -134,12 +104,18 @@ def profile(ctx, **kwargs):
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
     datasource_list = kwargs["datasources"].split(",")
+    outfile_fqn = get_outfile_fqn(
+        outdir=ctx.obj["project"]["outdir"],
+        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+        infix="data_comparison",
+    )
 
     task = ProfileTask(
-        ctx.obj["profile"],
-        ctx.obj["project"],
-        ctx.obj["runtime"],
-        datasource_list,
+        profile=ctx.obj["profile"],
+        project=ctx.obj["project"],
+        runtime=ctx.obj["runtime"],
+        datasources=datasource_list,
+        outfile_fqn=outfile_fqn,
         compare=kwargs["compare"],
     )
     task.execute()
@@ -179,11 +155,18 @@ def compare_data(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
+    outfile_fqn = get_outfile_fqn(
+        outdir=ctx.obj["project"]["outdir"],
+        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+        infix="data_comparison",
+    )
+
     task = CompareDataTask(
         profile=ctx.obj["profile"],
         project=ctx.obj["project"],
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
+        outfile_fqn=outfile_fqn,
         sample_count=kwargs["sample_count"],
     )
     task.execute()
@@ -234,11 +217,18 @@ def compare_column(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
+    outfile_fqn = get_outfile_fqn(
+        outdir=ctx.obj["project"]["outdir"],
+        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+        infix="column_comparison",
+    )
+
     task = CompareColumnTask(
         profile=ctx.obj["profile"],
         project=ctx.obj["project"],
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
+        outfile_fqn=outfile_fqn,
     )
     task.execute()
 
@@ -279,11 +269,18 @@ def compare(ctx, **kwargs):
 
     datasource_list = kwargs["datasources"].split(",")
 
+    outfile_fqn = get_outfile_fqn(
+        outdir=ctx.obj["project"]["outdir"],
+        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+        infix="comparison",
+    )
+
     task = CompareTask(
         profile=ctx.obj["profile"],
         project=ctx.obj["project"],
         runtime=ctx.obj["runtime"],
         datasources=datasource_list,
+        outfile_fqn=outfile_fqn,
         sample_count=kwargs["sample_count"],
     )
     task.execute()

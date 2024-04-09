@@ -1,15 +1,16 @@
 import logging
+import os
 import time
 from dataclasses import _MISSING_TYPE, dataclass, fields
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict, List, Union
 
 import pandas as pd
-
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
 from tulona.task.helper import create_profile, perform_comparison
 from tulona.util.excel import highlight_mismatch_cells
-from tulona.util.filesystem import get_outfile_fqn
+from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 
 log = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class ProfileTask(BaseTask):
     project: Dict
     runtime: RunConfig
     datasources: List[str]
+    outfile_fqn: Union[Path, str]
     compare: bool = False
 
     # Support for default values
@@ -77,10 +79,7 @@ class ProfileTask(BaseTask):
             df = create_profile(database, schema, table, metrics, conman)
             df_collection.append(df)
 
-        outfile_fqn = get_outfile_fqn(
-            self.project["outdir"], ds_name_compressed_list, "profiles"
-        )
-
+        _ = create_dir_if_not_exist(self.project["outdir"])
         if self.compare:
             log.debug("Preparing metadata comparison")
             df_merge = perform_comparison(
@@ -88,21 +87,24 @@ class ProfileTask(BaseTask):
             )
             log.debug(f"Calculated comparison for {df_merge.shape[0]} columns")
 
-            log.debug(f"Writing results into file: {outfile_fqn}")
+            log.debug(f"Writing results into file: {self.outfile_fqn}")
             primary_key_col = df_merge.pop("column_name")
             df_merge.insert(loc=0, column="column_name", value=primary_key_col)
-            df_merge.to_excel(outfile_fqn, sheet_name="Metadata Comparison", index=False)
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                df_merge.to_excel(writer, sheet_name="Metadata Comparison", index=False)
 
             log.debug("Highlighting mismtach cells")
             highlight_mismatch_cells(
-                excel_file=outfile_fqn,
+                excel_file=self.outfile_fqn,
                 sheet="Metadata Comparison",
                 num_ds=len(ds_name_compressed_list),
                 skip_columns="column_name",
             )
         else:
-            log.debug(f"Writing results into file: {outfile_fqn}")
-            with pd.ExcelWriter(outfile_fqn) as writer:
+            log.debug(f"Writing results into file: {self.outfile_fqn}")
+            with pd.ExcelWriter(self.outfile_fqn) as writer:
                 for ds_name, df in zip(ds_name_compressed_list, df_collection):
                     primary_key_col = df.pop("column_name")
                     df.insert(loc=0, column="column_name", value=primary_key_col)
