@@ -149,7 +149,7 @@ Tulona has following commands available:
 
 For debug level log, add `-v` or `--verbose` flag along with any command. For example:
 
-  ``tulona ping -v --datasources employee_postgres``
+``tulona ping -v --datasources employee_postgres``
 
 To know more about any specific command, execute `tulona <command> -h`.
 
