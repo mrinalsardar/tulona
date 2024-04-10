@@ -30,11 +30,11 @@ def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
     return query
 
 
-def get_column_query(table_name: str, column: str, quoted=False):
+def get_column_query(table_fqn: str, column: str, quoted=False):
     if quoted:
-        query = f"""select "{column}" from {table_name}"""
+        query = f"""select "{column}" from {table_fqn}"""
     else:
-        query = f"""select {column} from {table_name}"""
+        query = f"""select {column} from {table_fqn}"""
 
     return query
 

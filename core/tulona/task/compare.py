@@ -16,7 +16,6 @@ from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
-from tulona.util.project import extract_table_name_from_config
 from tulona.util.sql import (
     build_filter_query_expression,
     get_column_query,
@@ -138,7 +137,6 @@ class CompareDataTask(BaseTask):
         conman1, conman2 = connection_managers
         exclude_columns1, exclude_columns2 = exclude_columns_lol
 
-        log.info("Extracting row data")
         # TODO: push column exclusion down to the database/query
         primary_key = primary_key.lower()
         query_expr = None
@@ -209,7 +207,7 @@ class CompareDataTask(BaseTask):
         df_row_comp = perform_comparison(
             ds_name_compressed_list, row_data_list, primary_key
         )
-        log.debug(f"Prepared comparision for {df_row_comp.shape[0]} rows")
+        log.debug(f"Prepared comparison for {df_row_comp.shape[0]} rows")
 
         log.debug(f"Writing comparison result into: {self.outfile_fqn}")
         _ = create_dir_if_not_exist(self.project["outdir"])
@@ -263,86 +261,92 @@ class CompareColumnTask(BaseTask):
         if len(self.datasources) != 2:
             raise ValueError("Comparison works between two entities, not more, not less.")
 
-        datasource1, datasource2 = self.datasources
-        if ":" in datasource1 and ":" in datasource2:
-            datasource1, column1 = datasource1.split(":")
-            datasource2, column2 = datasource2.split(":")
-        elif ":" in datasource1:
-            datasource1, column1 = datasource1.split(":")
-            column2 = column1
-        elif ":" in datasource2:
-            datasource2, column2 = datasource2.split(":")
-            column1 = column2
-        elif (
-            "compare_column" in self.project["datasources"][datasource1]
-            and "compare_column" in self.project["datasources"][datasource2]
-        ):
-            column1 = self.project["datasources"][datasource1]["compare_column"]
-            column2 = self.project["datasources"][datasource2]["compare_column"]
-        elif "compare_column" in self.project["datasources"][datasource1]:
-            column1 = self.project["datasources"][datasource1]["compare_column"]
-            column2 = column1
-        elif "compare_column" in self.project["datasources"][datasource2]:
-            column2 = self.project["datasources"][datasource2]["compare_column"]
-            column1 = column2
-        else:
-            raise TulonaMissingPropertyError(
-                "Column name must be specified for task: compare-column"
-                " either by specifying 'compare_column' property in"
-                " at least one of the datasource[project] configs"
-                " (check sample tulona-project.yml file for example)"
-                " or with '--datasources' command line argument"
-                " using one of the following formats"
-                " (column name is same for option 3 and 4):-"
-                " 1. <datasource1>:<col1>,<datasource2>:<col2>"
-                " 2. <datasource1>:<col>,<datasource2>:<col>"
-                " 3. <datasource1>:<col>,<datasource2>"
-                " 4. <datasource1>,<datasource2>:<col>"
+        ds_compressed_names = []
+        compare_columns = []
+        column_df_list = []
+        for ds_name in self.datasources:
+            log.info(f"Processing data source {ds_name}")
+            ds_compressed_names.append(ds_name.replace("_", ""))
+            ds_config = self.project["datasources"][ds_name]
+
+            if "compare_column" in ds_config:
+                column = ds_config["compare_column"]
+                compare_columns.append(column)
+            else:
+                raise TulonaMissingPropertyError(
+                    "Property 'compare_column' must be specified for column comparison"
+                )
+            log.debug(f"Extracting data for column {column}")
+
+            dbtype = self.profile["profiles"][
+                extract_profile_name(self.project, ds_name)
+            ]["type"]
+            log.debug(f"Database type: {dbtype}")
+
+            # MySQL doesn't have logical database
+            if "database" in ds_config and dbtype.lower() != "mysql":
+                database = ds_config["database"]
+            else:
+                database = None
+            schema = ds_config["schema"]
+            table = ds_config["table"]
+            table_fqn = get_table_fqn(database, schema, table)
+            log.debug(f"Table FQN: {table_fqn}")
+
+            log.debug(f"Acquiring connection to the database of: {ds_name}")
+            connection_profile = get_connection_profile(
+                self.profile, self.project, ds_name
+            )
+            conman = self.get_connection_manager(conn_profile=connection_profile)
+
+            query = get_column_query(table_fqn, column)
+            try:
+                log.debug(f"Trying unquoted column name: {column}")
+                log.debug(f"Executing query: {query}")
+                df = get_query_output_as_df(connection_manager=conman, query_text=query)
+            except Exception as exp:
+                log.warning(f"Failed with error: {exp}")
+                log.debug(f'Trying quoted column name: "{column}"')
+                query = get_column_query(table_fqn, column, quoted=True)
+                log.debug(f"Executing query: {query}")
+                df = get_query_output_as_df(connection_manager=conman, query_text=query)
+
+            if df.shape[0] == 0:
+                raise ValueError(f"Table {table_fqn} doesn't have any data")
+
+            log.debug(f"Found {df.shape[0]} records in {table_fqn}")
+
+            df = df.rename(columns={c: c.lower() for c in df.columns})
+            column_df_list.append(df)
+
+        compare_columns = {c.lower() for c in compare_columns}
+        if len(compare_columns) > 1:
+            raise ValueError(
+                "Column comparison works only when the column name is same for both data source"
+                "(not case sensitive)"
             )
 
-        ds_dict1 = self.project["datasources"][datasource1]
-        ds_dict2 = self.project["datasources"][datasource2]
-
-        dbtype1 = self.profile["profiles"][
-            extract_profile_name(self.project, datasource1)
-        ]["type"]
-        dbtype2 = self.profile["profiles"][
-            extract_profile_name(self.project, datasource2)
-        ]["type"]
-        table_name1 = extract_table_name_from_config(config=ds_dict1, dbtype=dbtype1)
-        table_name2 = extract_table_name_from_config(config=ds_dict2, dbtype=dbtype2)
-
-        log.debug(f"Extracting data from table: {table_name1}")
-        df1 = self.get_column_data(datasource1, table_name1, column1)
-        log.debug(f"Extracting data from table: {table_name2}")
-        df2 = self.get_column_data(datasource2, table_name2, column2)
-
-        df1 = df1.rename(columns={c: c.lower() for c in df2.columns})
-        df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
-        column1, column2 = column1.lower(), column2.lower()
-
-        ds1_compressed = datasource1.replace("_", "")
-        ds2_compressed = datasource2.replace("_", "")
-
-        df_merge = pd.merge(
-            left=df1,
-            right=df2,
-            left_on=column1,
-            right_on=column2,
+        log.debug("Perform comparison")
+        df_comp = perform_comparison(
+            ds_compressed_names=ds_compressed_names,
+            dataframes=column_df_list,
+            on=compare_columns.pop(),
             how="outer",
-            suffixes=("_left_" + ds1_compressed, "_right_" + ds2_compressed),
-            validate="one_to_one",
             indicator="presence",
+            validate="one_to_one",
         )
-        df_merge = df_merge[df_merge["presence"] != "both"]
-        log.debug(f"Found {df_merge.shape[0]} extra values both side combined")
+        df_comp = df_comp[df_comp["presence"] != "both"]
+        df_comp["presence"] = df_comp["presence"].map(
+            {"left_only": ds_compressed_names[0], "right_only": ds_compressed_names[1]}
+        )
+        log.debug(f"Found {df_comp.shape[0]} mismatches both side combined")
 
         log.debug(f"Writing output into: {self.outfile_fqn}")
         _ = create_dir_if_not_exist(self.project["outdir"])
         with pd.ExcelWriter(
             self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
         ) as writer:
-            df_merge.to_excel(writer, sheet_name="Column Comparison", index=False)
+            df_comp.to_excel(writer, sheet_name="Column Comparison", index=False)
 
         end_time = time.time()
         log.info("------------------------ Finished task: compare-column")
@@ -373,33 +377,42 @@ class CompareTask(BaseTask):
         start_time = time.time()
 
         # Metadata comparison
-        ProfileTask(
-            profile=self.profile,
-            project=self.project,
-            runtime=self.runtime,
-            datasources=self.datasources,
-            outfile_fqn=self.outfile_fqn,
-            compare=True,
-        ).execute()
+        try:
+            ProfileTask(
+                profile=self.profile,
+                project=self.project,
+                runtime=self.runtime,
+                datasources=self.datasources,
+                outfile_fqn=self.outfile_fqn,
+                compare=True,
+            ).execute()
+        except Exception as exc:
+            log.error(f"Profiling failed with error: {exc}")
 
         # Row comparison
-        CompareDataTask(
-            profile=self.profile,
-            project=self.project,
-            runtime=self.runtime,
-            datasources=self.datasources,
-            outfile_fqn=self.outfile_fqn,
-            sample_count=self.sample_count,
-        ).execute()
+        try:
+            CompareDataTask(
+                profile=self.profile,
+                project=self.project,
+                runtime=self.runtime,
+                datasources=self.datasources,
+                outfile_fqn=self.outfile_fqn,
+                sample_count=self.sample_count,
+            ).execute()
+        except Exception as exc:
+            log.error(f"Row comparison failed with error: {exc}")
 
         # Column comparison
-        CompareColumnTask(
-            profile=self.profile,
-            project=self.project,
-            runtime=self.runtime,
-            datasources=self.datasources,
-            outfile_fqn=self.outfile_fqn,
-        ).execute()
+        try:
+            CompareColumnTask(
+                profile=self.profile,
+                project=self.project,
+                runtime=self.runtime,
+                datasources=self.datasources,
+                outfile_fqn=self.outfile_fqn,
+            ).execute()
+        except Exception as exc:
+            log.error(f"Column comparison failed with error: {exc}")
 
         end_time = time.time()
         log.info("------------------------ Finished task: compare")
