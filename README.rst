@@ -115,6 +115,7 @@ Tulona has following commands available:
   * Profiling without `--compare` flag. It will write metadata and metrics about different sources/tables in different sheets/tabs in the excel file (not a comparison view):
 
     ``tulona profile --datasources employee_postgres,employee_mysql``
+
   * Profiling with `--compare` flag. It will produce a comparison view (side by side):
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
@@ -124,6 +125,7 @@ Tulona has following commands available:
   * Command without `--sample-count` parameter:
 
     ``tulona compare-data --datasources employee_postgres,employee_mysql``
+
   * Command with `--sample-count` parameter:
 
     ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
