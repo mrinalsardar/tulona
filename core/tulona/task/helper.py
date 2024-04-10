@@ -1,8 +1,7 @@
 import logging
-from typing import List
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
-
 from tulona.adapter.connection import ConnectionManager
 from tulona.util.sql import (
     get_metadata_query,
@@ -75,9 +74,15 @@ def create_profile(
 
 # TODO: common param to toggle comparison result for common vs all columns
 def perform_comparison(
-    ds_compressed_names: List[str], dataframes: List[pd.DataFrame], primary_key: str
+    ds_compressed_names: List[str],
+    dataframes: List[pd.DataFrame],
+    on: str,
+    how: str = "inner",
+    suffixes: Tuple[str] = ("_x", "_y"),
+    indicator: Union[bool, str] = False,
+    validate: Optional[str] = None,
 ) -> pd.DataFrame:
-    primary_key = primary_key.lower()
+    primary_key = on.lower()
     common_columns = {c.lower() for c in dataframes[0].columns.tolist()}
 
     dataframes_final = []
@@ -99,7 +104,15 @@ def perform_comparison(
 
     df_merge = dataframes_final.pop()
     for df in dataframes_final:
-        df_merge = pd.merge(left=df_merge, right=df, on=primary_key, how="inner")
+        df_merge = pd.merge(
+            left=df_merge,
+            right=df,
+            on=primary_key,
+            how=how,
+            suffixes=suffixes,
+            indicator=indicator,
+            validate=validate,
+        )
     df_merge = df_merge[sorted(df_merge.columns.tolist())]
 
     return df_merge

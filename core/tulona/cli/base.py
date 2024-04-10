@@ -105,7 +105,7 @@ def profile(ctx, **kwargs):
     outfile_fqn = get_outfile_fqn(
         outdir=ctx.obj["project"]["outdir"],
         ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-        infix="data_comparison",
+        infix="profiling",
     )
 
     task = ProfileTask(
