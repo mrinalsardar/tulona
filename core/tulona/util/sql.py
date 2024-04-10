@@ -1,11 +1,11 @@
-from typing import Dict
+from typing import Dict, Union
 
 import pandas as pd
 
 from tulona.exceptions import TulonaNotImplementedError
 
 
-def get_table_fqn(database: str, schema: str, table: str) -> str:
+def get_table_fqn(database: Union[str, None], schema: str, table: str) -> str:
     table_fqn = f"{database + '.' if database else ''}{schema}.{table}"
     return table_fqn
 
@@ -168,7 +168,7 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
     return query
 
 
-def get_table_data_query(conman, dbtype, table_fqn, sample_count, query_expr: str = None):
+def get_table_data_query(dbtype, table_fqn, sample_count, query_expr: str = None):
     if query_expr:
         query = f"select * from {table_fqn} where {query_expr}"
     else:
