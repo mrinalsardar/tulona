@@ -376,33 +376,42 @@ class CompareTask(BaseTask):
         start_time = time.time()
 
         # Metadata comparison
-        ProfileTask(
-            profile=self.profile,
-            project=self.project,
-            runtime=self.runtime,
-            datasources=self.datasources,
-            outfile_fqn=self.outfile_fqn,
-            compare=True,
-        ).execute()
+        try:
+            ProfileTask(
+                profile=self.profile,
+                project=self.project,
+                runtime=self.runtime,
+                datasources=self.datasources,
+                outfile_fqn=self.outfile_fqn,
+                compare=True,
+            ).execute()
+        except Exception as exc:
+            log.error(f"Profiling failed with error: {exc}")
 
         # Row comparison
-        CompareDataTask(
-            profile=self.profile,
-            project=self.project,
-            runtime=self.runtime,
-            datasources=self.datasources,
-            outfile_fqn=self.outfile_fqn,
-            sample_count=self.sample_count,
-        ).execute()
+        try:
+            CompareDataTask(
+                profile=self.profile,
+                project=self.project,
+                runtime=self.runtime,
+                datasources=self.datasources,
+                outfile_fqn=self.outfile_fqn,
+                sample_count=self.sample_count,
+            ).execute()
+        except Exception as exc:
+            log.error(f"Row comparison failed with error: {exc}")
 
         # Column comparison
-        CompareColumnTask(
-            profile=self.profile,
-            project=self.project,
-            runtime=self.runtime,
-            datasources=self.datasources,
-            outfile_fqn=self.outfile_fqn,
-        ).execute()
+        try:
+            CompareColumnTask(
+                profile=self.profile,
+                project=self.project,
+                runtime=self.runtime,
+                datasources=self.datasources,
+                outfile_fqn=self.outfile_fqn,
+            ).execute()
+        except Exception as exc:
+            log.error(f"Column comparison failed with error: {exc}")
 
         end_time = time.time()
         log.info("------------------------ Finished task: compare")
