@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
+
 from tulona.adapter.connection import ConnectionManager
 from tulona.util.sql import (
     get_metadata_query,

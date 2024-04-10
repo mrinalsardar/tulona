@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
+
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
