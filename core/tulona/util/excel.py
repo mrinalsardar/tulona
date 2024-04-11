@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Union
 
 from openpyxl import load_workbook, styles
 from openpyxl.styles import Border, Side
@@ -16,7 +16,7 @@ def get_column_index(sheet: Worksheet, column: str):
 # TODO: Testable function - it should take WorkBook as input instead of excel_file and return WorkBook
 # instead of saving the file
 def highlight_mismatch_cells(  # pargma: no cover
-    excel_file, sheet: str, num_ds: int, skip_columns: Union[str, list[str]] = None
+    excel_file, sheet: str, num_ds: int, skip_columns: Union[str, List[str]] = None
 ):
     wb = load_workbook(excel_file)
     ws = wb[sheet]
