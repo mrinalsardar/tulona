@@ -2,11 +2,11 @@ from pathlib import Path
 from typing import Dict
 
 
-def profile_path() -> str:
+def profile_path() -> str:  # pragma: no cover
     return Path(Path.home(), ".tulona", "profiles.yml")
 
 
-def profile_exists():
+def profile_exists():  # pragma: no cover
     return profile_path().exists()
 
 

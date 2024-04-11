@@ -13,42 +13,9 @@ def get_column_index(sheet: Worksheet, column: str):
     raise ValueError(f"Column {column} could not be found in the Excel sheet.")
 
 
-def highlight_mismatch_pair(excel_file, sheet):
-    wb = load_workbook(excel_file)
-    ws = wb[sheet]
-
-    yellow_fill = styles.PatternFill(
-        start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid"
-    )
-
-    left_border = Border(
-        left=Side(border_style="thin"),
-        right=Side(border_style="dotted"),
-        top=Side(border_style="thin"),
-        bottom=Side(border_style="thin"),
-    )
-    right_border = Border(
-        left=Side(border_style="dotted"),
-        right=Side(border_style="thin"),
-        top=Side(border_style="thin"),
-        bottom=Side(border_style="thin"),
-    )
-
-    for row in ws.iter_rows(
-        min_row=2, min_col=0, max_row=ws.max_row, max_col=ws.max_column
-    ):
-        for col_idx in range(0, ws.max_column, 2):
-            if row[col_idx].value != row[col_idx + 1].value:
-                row[col_idx].fill = yellow_fill
-                row[col_idx + 1].fill = yellow_fill
-
-                row[col_idx].border = left_border
-                row[col_idx + 1].border = right_border
-
-    wb.save(excel_file)
-
-
-def highlight_mismatch_cells(
+# TODO: Testable function - it should take WorkBook as input instead of excel_file and return WorkBook
+# instead of saving the file
+def highlight_mismatch_cells(  # pargma: no cover
     excel_file, sheet: str, num_ds: int, skip_columns: Union[str, list[str]] = None
 ):
     wb = load_workbook(excel_file)

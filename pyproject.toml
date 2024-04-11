@@ -77,9 +77,23 @@ exclude = '''
 [tool.coverage.run]
 branch = true
 source = ["core"]
+omit = [
+  "core/setup.py",
+  "core/tulona/__init__.py",
+  "core/tulona/config/__init__.py",
+  "core/tulona/util/__init__.py",
+  "core/tulona/config/profile.py",
+  "core/tulona/config/project.py",
+  "core/tulona/config/runtime.py",
+  "core/tulona/util/database.py",
+  "core/tulona/util/filesystem.py",
+]
 
 [tool.coverage.report]
 exclude_also = [
+  "pargma: no cover",
+  "def __init__",
+  "if __name__ == .__main__.:",
   "raise AssertionError",
   "raise NotImplementedError",
   "raise TulonaNotImplementedError",

@@ -39,7 +39,7 @@ def get_column_query(table_fqn: str, column: str, quoted=False):
     return query
 
 
-def get_query_output_as_df(connection_manager, query_text: str):
+def get_query_output_as_df(connection_manager, query_text: str):  # pragma: no cover
     with connection_manager.engine.connect() as conn:
         df = pd.read_sql_query(query_text, conn)
     return df

@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 
 from tulona.exceptions import (
-    TulonaInvalidProfileConfigError,
     TulonaMissingPropertyError,
     TulonaProfileException,
 )
