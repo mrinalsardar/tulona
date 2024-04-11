@@ -1,5 +1,6 @@
 import pytest
 from openpyxl import Workbook
+
 from tulona.util.excel import get_column_index
 
 

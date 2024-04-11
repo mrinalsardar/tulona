@@ -1,4 +1,5 @@
 import pytest
+
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 
 

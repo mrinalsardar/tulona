@@ -10,7 +10,7 @@ code-quality:
 merge-validate: run-tests
 	python -m build && twine check dist/*
 
-# TODO: introduce --project-dir param
+# TODO: introduce --project-dir param for the following to work
 # regression-test:
 # 	tulona ping --datasources employee_postgres
 # 	tulona ping -v --datasources employee_postgres
