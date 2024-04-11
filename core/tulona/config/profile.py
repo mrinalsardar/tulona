@@ -1,7 +1,11 @@
 import logging
 from pathlib import Path
 
-from tulona.exceptions import TulonaInvalidProfileConfigError, TulonaProfileException
+from tulona.exceptions import (
+    TulonaInvalidProfileConfigError,
+    TulonaMissingPropertyError,
+    TulonaProfileException,
+)
 from tulona.util.filesystem import path_exists
 from tulona.util.yaml_parser import read_yaml
 
@@ -21,13 +25,19 @@ class Profile:
         return Path(self.get_profile_root, PROFILE_FILE_NAME)
 
     def validate_profile_config(self, profile_dict_raw: dict) -> bool:
-        # TODO: implement validations for profile config
-        valid = True
+        for proj in profile_dict_raw:
+            proj_dict = profile_dict_raw[proj]
+            if "profiles" not in proj_dict:
+                raise TulonaMissingPropertyError(
+                    f"Project {proj} doesn't have any connection profiles defined"
+                )
 
-        if not valid:
-            raise TulonaInvalidProfileConfigError(
-                "Invalid profile config. Please check 'profiles.yml'"
-            )
+            for prof in proj_dict["profiles"]:
+                prof_dict = proj_dict["profiles"][prof]
+                if "type" not in prof_dict:
+                    raise TulonaMissingPropertyError(
+                        f"Connection profile {prof} doesn't 'type' specified"
+                    )
 
     def load_profile_config(self) -> None:
         profile_file_uri = self.profile_conf_path
