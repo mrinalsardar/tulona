@@ -1,13 +1,16 @@
+run-tests:
+	coverage run -m pytest -v tests
+	coverage report
+
 code-quality:
 	flake8 .
 	isort .
 	black .
 
-merge-validate:
-	pytest
+merge-validate: run-tests
 	python -m build && twine check dist/*
 
-# TODO: introduce --project-dir param
+# TODO: introduce --project-dir param for the following to work
 # regression-test:
 # 	tulona ping --datasources employee_postgres
 # 	tulona ping -v --datasources employee_postgres

@@ -40,6 +40,7 @@ def get_result_dir(dir_dict: dict, base: Union[str, Path], key: str) -> Path:
     return create_or_replace_dir(p)
 
 
+# TODO: Testable - pull current timestamp from caller
 def get_outfile_fqn(outdir: str, ds_list: List[str], infix: str):
     out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     outfile = f"{'_'.join(ds_list)}_{infix}_{out_timestamp}.xlsx"

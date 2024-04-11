@@ -146,7 +146,7 @@ class CompareDataTask(BaseTask):
             log.debug(f"Extraction iteration: {i + 1}/5")
 
             query1 = get_table_data_query(
-                conman1, dbtype1, table_fqn1, self.sample_count, query_expr
+                dbtype1, table_fqn1, self.sample_count, query_expr
             )
             if self.sample_count < 51:
                 log.debug(f"Executing query: {query1}")
@@ -166,7 +166,6 @@ class CompareDataTask(BaseTask):
                 )
 
             query2 = get_table_data_query(
-                conman2,
                 dbtype2,
                 table_fqn2,
                 self.sample_count,

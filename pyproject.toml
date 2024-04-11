@@ -1,6 +1,6 @@
 [project]
 name = "tulona"
-version = "0.3.2"
+version = "0.3.3"
 description = "A tool to compare data from different sources."
 dependencies = [
   "click~=8.1",
@@ -28,7 +28,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
+  # "Programming Language :: Python :: 3.12",
 ]
 keywords = [
   "tulona",
@@ -77,9 +77,23 @@ exclude = '''
 [tool.coverage.run]
 branch = true
 source = ["core"]
+omit = [
+  "core/setup.py",
+  "core/tulona/__init__.py",
+  "core/tulona/config/__init__.py",
+  "core/tulona/util/__init__.py",
+  "core/tulona/config/profile.py",
+  "core/tulona/config/project.py",
+  "core/tulona/config/runtime.py",
+  "core/tulona/util/database.py",
+  "core/tulona/util/filesystem.py",
+]
 
 [tool.coverage.report]
 exclude_also = [
+  "pargma: no cover",
+  "def __init__",
+  "if __name__ == .__main__.:",
   "raise AssertionError",
   "raise NotImplementedError",
   "raise TulonaNotImplementedError",
@@ -100,7 +114,7 @@ line_length = 90
 skip = [".gitignore"]
 
 [tool.bumpversion]
-current_version = "0.3.2"
+current_version = "0.3.3"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"

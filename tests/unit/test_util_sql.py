@@ -8,7 +8,21 @@ from tulona.util.sql import (
     get_metadata_query,
     get_metric_query,
     get_sample_row_query,
+    get_table_data_query,
+    get_table_fqn,
 )
+
+
+@pytest.mark.parametrize(
+    "database,schema,table,expected",
+    [
+        ("database", "schema", "table", "database.schema.table"),
+        (None, "schema", "table", "schema.table"),
+    ],
+)
+def test_get_table_fqn(database, schema, table, expected):
+    table_fqn = get_table_fqn(database, schema, table)
+    assert table_fqn == expected
 
 
 @pytest.mark.parametrize(
@@ -337,4 +351,28 @@ def test_get_metadata_query(database, schema, table, expected):
 )
 def test_get_metric_query(table_fqn, columns_dtype, metrics, quoted, expected):
     query = get_metric_query(table_fqn, columns_dtype, metrics, quoted)
+    assert query == expected
+
+
+@pytest.mark.parametrize(
+    "dbtype,table_fqn,sample_count,query_expr,expected",
+    [
+        (
+            "postgres",
+            "database.schema.table",
+            20,
+            "id in (1, 2)",
+            "select * from database.schema.table where id in (1, 2)",
+        ),
+        (
+            "postgres",
+            "database.schema.table",
+            20,
+            None,
+            "select * from database.schema.table limit 20",
+        ),
+    ],
+)
+def test_get_table_data_query(dbtype, table_fqn, sample_count, query_expr, expected):
+    query = get_table_data_query(dbtype, table_fqn, sample_count, query_expr)
     assert query == expected
