@@ -32,20 +32,25 @@ if __name__ == "__main__":
             df = pd.read_csv(csvf)
 
             # Changing some values randomly
-            rows_to_modify = df.sample(frac=0.5).index
-            df.loc[rows_to_modify, "Age"] = np.random.randint(
-                10, 60, size=len(rows_to_modify)
-            )
+            if "Age" in df.columns:
+                rows_to_modify = df.sample(frac=0.5).index
+                df.loc[rows_to_modify, "Age"] = np.random.randint(
+                    10, 60, size=len(rows_to_modify)
+                )
 
-            rows_to_modify = df.sample(frac=0.5).index
-            new_values = np.random.choice(
-                list({Faker().job() for _ in range(5)}), size=len(rows_to_modify)
-            )
-            df.loc[rows_to_modify, "Department"] = new_values
+            if "Department" in df.columns:
+                rows_to_modify = df.sample(frac=0.5).index
+                new_values = np.random.choice(
+                    list({Faker().job() for _ in range(5)}), size=len(rows_to_modify)
+                )
+                df.loc[rows_to_modify, "Department"] = new_values
 
             # Converting date time columns from string to datetime
-            df["Employment_Date"] = pd.to_datetime(df["Employment_Date"])
-            df["Date_of_Birth"] = pd.to_datetime(df["Date_of_Birth"])
+            if "Employment_Date" in df.columns:
+                df["Employment_Date"] = pd.to_datetime(df["Employment_Date"])
+
+            if "Date_of_Birth" in df.columns:
+                df["Date_of_Birth"] = pd.to_datetime(df["Date_of_Birth"])
 
             # Dropping random rows
             keep = int((df.shape[0] / 100) * random.randint(80, 100))
