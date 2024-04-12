@@ -45,11 +45,6 @@ def cli(ctx):
 def ping(ctx, **kwargs):
     """Test connectivity to datasources"""
 
-    if not kwargs["datasources"]:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: ping"
-        )
-
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
 
@@ -60,7 +55,10 @@ def ping(ctx, **kwargs):
     ctx.obj["project"] = proj.load_project_config()
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
 
-    datasource_list = kwargs["datasources"].split(",")
+    if kwargs["datasources"]:
+        datasource_list = kwargs["datasources"].split(",")
+    else:
+        datasource_list = list(ctx.obj["project"]["datasources"].keys())
 
     task = PingTask(
         profile=ctx.obj["profile"],
@@ -81,11 +79,6 @@ def ping(ctx, **kwargs):
 def profile(ctx, **kwargs):
     """Profile data sources to collect metadata [row count, column min/max/mean etc.]"""
 
-    if not kwargs["datasources"]:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: profile"
-        )
-
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
 
@@ -97,26 +90,39 @@ def profile(ctx, **kwargs):
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs["datasources"].split(",")
-
     # Override config outdir if provided in command line
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
-    outfile_fqn = get_outfile_fqn(
-        outdir=ctx.obj["project"]["outdir"],
-        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-        infix="profiling",
-    )
 
-    task = ProfileTask(
-        profile=ctx.obj["profile"],
-        project=ctx.obj["project"],
-        runtime=ctx.obj["runtime"],
-        datasources=datasource_list,
-        outfile_fqn=outfile_fqn,
-        compare=kwargs["compare"],
-    )
-    task.execute()
+    source_maps = []
+    if kwargs["datasources"]:
+        source_maps.append(kwargs["datasources"].split(","))
+    elif "source_map" in ctx.obj["project"]:
+        source_maps = ctx.obj["project"]["source_map"]
+    else:
+        raise TulonaMissingArgumentError(
+            "Either --datasources command line argument or source_map (tulona-project.yml)"
+            " must be provided with command: profile"
+            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
+            " for more information on source_map"
+        )
+
+    for datasource_list in source_maps:
+        outfile_fqn = get_outfile_fqn(
+            outdir=ctx.obj["project"]["outdir"],
+            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            infix="profiling",
+        )
+
+        task = ProfileTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            runtime=ctx.obj["runtime"],
+            datasources=datasource_list,
+            outfile_fqn=outfile_fqn,
+            compare=kwargs["compare"],
+        )
+        task.execute()
 
 
 # command: tulona compare-data
@@ -130,11 +136,6 @@ def profile(ctx, **kwargs):
 def compare_data(ctx, **kwargs):
     """Compares two data entities"""
 
-    if not kwargs["datasources"]:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: compare-data"
-        )
-
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
 
@@ -146,26 +147,39 @@ def compare_data(ctx, **kwargs):
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs["datasources"].split(",")
-
     # Override config outdir if provided in command line
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
-    outfile_fqn = get_outfile_fqn(
-        outdir=ctx.obj["project"]["outdir"],
-        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-        infix="data_comparison",
-    )
 
-    task = CompareDataTask(
-        profile=ctx.obj["profile"],
-        project=ctx.obj["project"],
-        runtime=ctx.obj["runtime"],
-        datasources=datasource_list,
-        outfile_fqn=outfile_fqn,
-        sample_count=kwargs["sample_count"],
-    )
-    task.execute()
+    source_maps = []
+    if kwargs["datasources"]:
+        source_maps.append(kwargs["datasources"].split(","))
+    elif "source_map" in ctx.obj["project"]:
+        source_maps = ctx.obj["project"]["source_map"]
+    else:
+        raise TulonaMissingArgumentError(
+            "Either --datasources command line argument or source_map (tulona-project.yml)"
+            " must be provided with command: compare-data"
+            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
+            " for more information on source_map"
+        )
+
+    for datasource_list in source_maps:
+        outfile_fqn = get_outfile_fqn(
+            outdir=ctx.obj["project"]["outdir"],
+            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            infix="data_comparison",
+        )
+
+        task = CompareDataTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            runtime=ctx.obj["runtime"],
+            datasources=datasource_list,
+            outfile_fqn=outfile_fqn,
+            sample_count=kwargs["sample_count"],
+        )
+        task.execute()
 
 
 # command: tulona compare-column
@@ -183,11 +197,6 @@ def compare_column(ctx, **kwargs):
     (check sample tulona-project.yml file for example)
     """
 
-    if not kwargs["datasources"]:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: compare-column"
-        )
-
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
 
@@ -199,25 +208,38 @@ def compare_column(ctx, **kwargs):
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs["datasources"].split(",")
-
     # Override config outdir if provided in command line
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
-    outfile_fqn = get_outfile_fqn(
-        outdir=ctx.obj["project"]["outdir"],
-        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-        infix="column_comparison",
-    )
 
-    task = CompareColumnTask(
-        profile=ctx.obj["profile"],
-        project=ctx.obj["project"],
-        runtime=ctx.obj["runtime"],
-        datasources=datasource_list,
-        outfile_fqn=outfile_fqn,
-    )
-    task.execute()
+    source_maps = []
+    if kwargs["datasources"]:
+        source_maps.append(kwargs["datasources"].split(","))
+    elif "source_map" in ctx.obj["project"]:
+        source_maps = ctx.obj["project"]["source_map"]
+    else:
+        raise TulonaMissingArgumentError(
+            "Either --datasources command line argument or source_map (tulona-project.yml)"
+            " must be provided with command: compare-column"
+            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
+            " for more information on source_map"
+        )
+
+    for datasource_list in source_maps:
+        outfile_fqn = get_outfile_fqn(
+            outdir=ctx.obj["project"]["outdir"],
+            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            infix="column_comparison",
+        )
+
+        task = CompareColumnTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            runtime=ctx.obj["runtime"],
+            datasources=datasource_list,
+            outfile_fqn=outfile_fqn,
+        )
+        task.execute()
 
 
 # command: tulona compare
@@ -233,11 +255,6 @@ def compare(ctx, **kwargs):
     Compare everything(profiles, rows and columns) for the given datasoures
     """
 
-    if not kwargs["datasources"]:
-        raise TulonaMissingArgumentError(
-            "--datasources argument must be provided with command: compare-column"
-        )
-
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
 
@@ -249,26 +266,39 @@ def compare(ctx, **kwargs):
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
     ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
 
-    datasource_list = kwargs["datasources"].split(",")
-
     # Override config outdir if provided in command line
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
-    outfile_fqn = get_outfile_fqn(
-        outdir=ctx.obj["project"]["outdir"],
-        ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-        infix="comparison",
-    )
 
-    task = CompareTask(
-        profile=ctx.obj["profile"],
-        project=ctx.obj["project"],
-        runtime=ctx.obj["runtime"],
-        datasources=datasource_list,
-        outfile_fqn=outfile_fqn,
-        sample_count=kwargs["sample_count"],
-    )
-    task.execute()
+    source_maps = []
+    if kwargs["datasources"]:
+        source_maps.append(kwargs["datasources"].split(","))
+    elif "source_map" in ctx.obj["project"]:
+        source_maps = ctx.obj["project"]["source_map"]
+    else:
+        raise TulonaMissingArgumentError(
+            "Either --datasources command line argument or source_map (tulona-project.yml)"
+            " must be provided with command: compare"
+            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
+            " for more information on source_map"
+        )
+
+    for datasource_list in source_maps:
+        outfile_fqn = get_outfile_fqn(
+            outdir=ctx.obj["project"]["outdir"],
+            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            infix="comparison",
+        )
+
+        task = CompareTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            runtime=ctx.obj["runtime"],
+            datasources=datasource_list,
+            outfile_fqn=outfile_fqn,
+            sample_count=kwargs["sample_count"],
+        )
+        task.execute()
 
 
 if __name__ == "__main__":

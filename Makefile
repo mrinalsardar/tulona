@@ -2,12 +2,15 @@ run-tests:
 	coverage run -m pytest -v tests
 	coverage report
 
-code-quality:
+check-quality:
 	flake8 .
 	isort .
 	black .
 
-merge-validate: run-tests
+test-build:
+	python -m build && twine check dist/*
+
+validate-merge: run-tests test-build
 	python -m build && twine check dist/*
 
 # TODO: introduce --project-dir param for the following to work
@@ -24,4 +27,4 @@ merge-validate: run-tests
 # 	tulona compare --sample-count 50 --datasources employee_postgres,employee_mysql
 
 # full-check: code-quality merge-validate regression-test
-full-check: code-quality merge-validate
+full-check: check-quality validate-merge
