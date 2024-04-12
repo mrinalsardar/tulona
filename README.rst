@@ -68,7 +68,7 @@ This is how a `tulona-project.yml` file looks like:
 
   version: '2.0'
   name: integration_project
-  config-version: 1
+  config_version: 1
 
   outdir: output # the folder comparison result is written into
 

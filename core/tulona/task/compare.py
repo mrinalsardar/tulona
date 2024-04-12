@@ -55,7 +55,9 @@ class CompareDataTask(BaseTask):
         start_time = time.time()
 
         if len(self.datasources) != 2:
-            raise ValueError("Comparison needs two data sources.")
+            raise ValueError("Data comparison needs two data sources.")
+
+        log.info(f"Comparing {self.datasources}")
 
         # TODO: Add support of composite primary key
         # TODO: Add support for different names of primary keys in different tables
