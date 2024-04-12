@@ -92,6 +92,15 @@ This is how a `tulona-project.yml` file looks like:
         - phone_number
       compare_column: Employee_ID  # conditional optional
 
+  # List of lists
+  # The inner lists have datasources that need to be used for tasks like comparison
+  # For example employee_postgres vs employee_mysql. So a [employee_postgres, employee_mysql]
+  # Outer list is a list of those combinations.
+  # So like: [[employee_postgres, employee_mysql], [datasource3, datasource4]]
+  source_map:
+    - - employee_postgres
+      - employee_mysql
+
 
 Features
 --------
@@ -109,6 +118,10 @@ Tulona has following commands available:
   * More than one datasources can be passed to the `--datasources` parameter separated by commas:
 
     ``tulona ping --datasources employee_postgres,employee_mysql``
+
+  * To ping all the datasources, just skip the `--datasources` parameter:
+
+    ``tulona ping``
 
 * **profile**: To extract and compare metadata of two sources/tables. It includes metadata from `information_schema` related to the tables and some column level metrics (min, max, average, count & distinct_count). Sample commands:
 
@@ -139,6 +152,18 @@ Tulona has following commands available:
 * **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. It will prepare comparison of everything and write them into different sheets of a single excel file. Sample command:
 
   ``tulona compare --datasources employee_postgres,employee_mysql``
+
+
+From `tulona v0.4.0` a new project config property has been introduced: `source_map`. If this config is set, in the project config file (tulona-project.yml), then `--datasources` parameter can be skipped with commands.
+For example this command:
+
+``tulona compare --datasources employee_postgres,employee_mysql``
+
+will become this:
+
+``tulona compare``
+
+Please look at the sample project config from above to understand how to use `source_map` property.
 
 For debug level log, add `-v` or `--verbose` flag along with any command. For example:
 
