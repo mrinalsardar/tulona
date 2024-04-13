@@ -91,6 +91,27 @@ This is how a `tulona-project.yml` file looks like:
       exclude_columns:  # optional
         - phone_number
       compare_column: Employee_ID  # conditional optional
+    person_postgres:
+      connection_profile: pgdb
+      database: postgres
+      schema: public
+      table: people_composite_key
+      primary_key:
+        - ID_1
+        - ID_2
+      compare_column:
+        - ID_1
+        - ID_2
+    person_mysql:
+      connection_profile: mydb
+      schema: db
+      table: people_composite_key
+      primary_key:
+        - ID_1
+        - ID_2
+      compare_column:
+        - ID_1
+        - ID_2
 
   # List of lists
   # The inner lists have datasources that need to be used for tasks like comparison
@@ -100,6 +121,8 @@ This is how a `tulona-project.yml` file looks like:
   source_map:
     - - employee_postgres
       - employee_mysql
+    - - person_postgres
+      - person_mysql
 
 
 Features
@@ -148,6 +171,10 @@ Tulona has following commands available:
   * Column[s] to compare is[are] specified in `tulona-project.yml` file as part of datasource configs, with `compare_column` property. Sample command:
 
     ``tulona compare-column --datasources employee_postgres,employee_mysql``
+
+  * Compare multiples columns as composite key (combination of column values will be compared) with additional `--composite` flag:
+
+    ``tulona compare-column --composite --datasources employee_postgres,employee_mysql``
 
 * **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. It will prepare comparison of everything and write them into different sheets of a single excel file. Sample command:
 
