@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Tuple, Union
 
 from openpyxl import load_workbook, styles
 from openpyxl.styles import Border, Side
@@ -16,7 +16,10 @@ def get_column_index(sheet: Worksheet, column: str):
 # TODO: Testable function - it should take WorkBook as input instead of excel_file and return WorkBook
 # instead of saving the file
 def highlight_mismatch_cells(  # pargma: no cover
-    excel_file, sheet: str, num_ds: int, skip_columns: Union[str, List[str]] = None
+    excel_file,
+    sheet: str,
+    num_ds: int,
+    skip_columns: Union[str, Tuple[str], List[str]] = None,
 ):
     wb = load_workbook(excel_file)
     ws = wb[sheet]
@@ -47,7 +50,11 @@ def highlight_mismatch_cells(  # pargma: no cover
     )
 
     if skip_columns:
-        skip_columns = skip_columns if isinstance(skip_columns, list) else [skip_columns]
+        skip_columns = (
+            skip_columns
+            if isinstance(skip_columns, list) or isinstance(skip_columns, tuple)
+            else [skip_columns]
+        )
         skip_idxs = [get_column_index(ws, c.lower()) - 1 for c in skip_columns]
         compareable_col_idxs = list(set(range(ws.max_column)) - set(skip_idxs))
     else:

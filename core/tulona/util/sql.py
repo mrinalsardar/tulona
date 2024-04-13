@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 
@@ -30,11 +30,9 @@ def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
     return query
 
 
-def get_column_query(table_fqn: str, column: str, quoted=False):
-    if quoted:
-        query = f"""select "{column}" from {table_fqn}"""
-    else:
-        query = f"""select {column} from {table_fqn}"""
+def get_column_query(table_fqn: str, columns: List[str], quoted=False):
+    column_expr = ", ".join([f'"{c}"' if quoted else c for c in columns])
+    query = f"""select {column_expr} from {table_fqn}"""
 
     return query
 
@@ -46,17 +44,24 @@ def get_query_output_as_df(connection_manager, query_text: str):  # pragma: no c
 
 
 def build_filter_query_expression(
-    df: pd.DataFrame, primary_key: str, positive: bool = True
+    df: pd.DataFrame, primary_key: Union[List, Tuple, str], positive: bool = True
 ):
-    primary_keys = df[primary_key].tolist()
+    expr_list = []
+    primary_key = [primary_key] if isinstance(primary_key, str) else primary_key
+    for k in primary_key:
+        primary_key_values = df[k].tolist()
 
-    if "int" in str(df[primary_key].dtype):
-        primary_keys = [str(k) for k in primary_keys]
-        query_expr = f"""{primary_key}{'' if positive else ' not'} in ({", ".join(primary_keys)})"""
-    else:
-        query_expr = f"""{primary_key}{'' if positive else ' not'} in ('{"', '".join(primary_keys)}')"""
+        if pd.api.types.is_numeric_dtype(df[k]):
+            primary_key_values = [str(k) for k in primary_key_values]
+            query_expr = f"""{k}{'' if positive else ' not'} in ({", ".join(primary_key_values)})"""
+        else:
+            query_expr = f"""{k}{'' if positive else ' not'} in ('{"', '".join(primary_key_values)}')"""
 
-    return query_expr
+        expr_list.append(query_expr)
+
+    final_expr = f" {'and' if positive else 'or'} ".join(expr_list)
+
+    return final_expr
 
 
 def get_metadata_query(database, schema, table):

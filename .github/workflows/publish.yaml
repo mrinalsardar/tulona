@@ -12,8 +12,7 @@ jobs:
     if: github.event.pull_request.merged
     runs-on: ubuntu-latest
     environment: release
-    permissions:
-      id-token: write
+    permissions: write-all
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -26,8 +25,16 @@ jobs:
     - name: Install dependencies
       run: |
         pip install setuptools wheel build
-    - name: Build
+    - name: Build wheel & tarball
       run: |
         python -m build
-    - name: Publish
+    - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+    - name: Github release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release create ${{ github.ref_name }}
+        ./dist/*.tar.gz#Source code
+        --generate-notes
+        --title "tulona ${{ github.ref_name }}"

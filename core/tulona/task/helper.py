@@ -77,13 +77,14 @@ def create_profile(
 def perform_comparison(
     ds_compressed_names: List[str],
     dataframes: List[pd.DataFrame],
-    on: str,
+    on: Union[str, List],
     how: str = "inner",
     suffixes: Tuple[str] = ("_x", "_y"),
     indicator: Union[bool, str] = False,
     validate: Optional[str] = None,
 ) -> pd.DataFrame:
-    primary_key = on.lower()
+    on = [on] if isinstance(on, str) else on
+    primary_key = [k.lower() for k in on]
     common_columns = {c.lower() for c in dataframes[0].columns.tolist()}
 
     dataframes_final = []
@@ -95,12 +96,13 @@ def perform_comparison(
         df = df[list(common_columns)]
         df = df.rename(
             columns={
-                c: f"{c}_{ds_name}" if c.lower() != primary_key else c.lower()
+                c: f"{c}_{ds_name}" if c.lower() not in primary_key else c
                 for c in df.columns
             }
         )
-        if pd.api.types.is_string_dtype(df[primary_key]):
-            df[primary_key] = df[primary_key].str.lower()
+        for k in primary_key:
+            if pd.api.types.is_string_dtype(df[k]):
+                df[k] = df[k].str.lower()
         dataframes_final.append(df)
 
     df_merge = dataframes_final.pop()
