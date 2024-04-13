@@ -215,6 +215,12 @@ class CompareDataTask(BaseTask):
         log.debug(f"Prepared comparison for {df_row_comp.shape[0]} rows")
 
         log.debug(f"Writing comparison result into: {self.outfile_fqn}")
+        # Moving key columns to the beginning
+        new_columns = list(primary_key) + [
+            col for col in df_row_comp if col not in primary_key
+        ]
+        df_row_comp = df_row_comp[new_columns]
+
         _ = create_dir_if_not_exist(self.project["outdir"])
         with pd.ExcelWriter(
             self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
