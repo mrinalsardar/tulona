@@ -47,6 +47,7 @@ def build_filter_query_expression(
     df: pd.DataFrame, primary_key: Union[List, Tuple, str], positive: bool = True
 ):
     expr_list = []
+    primary_key = [primary_key] if isinstance(primary_key, str) else primary_key
     for k in primary_key:
         primary_key_values = df[k].tolist()
 

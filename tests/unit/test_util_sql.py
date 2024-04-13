@@ -70,24 +70,24 @@ def test_get_sample_row_query(dbtype, table_name, sample_count, expected):
 
 
 @pytest.mark.parametrize(
-    "table_name,column,quoted,expected",
+    "table_name,columns,quoted,expected",
     [
         (
             "database.schema.table",
-            "id",
+            ["id"],
             True,
             """select "id" from database.schema.table""",
         ),
         (
             "database.schema.table",
-            "id",
+            ["id"],
             False,
             """select id from database.schema.table""",
         ),
     ],
 )
-def test_get_column_query(table_name, column, quoted, expected):
-    query = get_column_query(table_name, column, quoted)
+def test_get_column_query(table_name, columns, quoted, expected):
+    query = get_column_query(table_name, columns, quoted)
     assert query == expected
 
 
