@@ -77,12 +77,13 @@ def create_profile(
 def perform_comparison(
     ds_compressed_names: List[str],
     dataframes: List[pd.DataFrame],
-    on: str,
+    on: Union[str, List],
     how: str = "inner",
     suffixes: Tuple[str] = ("_x", "_y"),
     indicator: Union[bool, str] = False,
     validate: Optional[str] = None,
 ) -> pd.DataFrame:
+    on = [on] if isinstance(on, str) else on
     primary_key = [k.lower() for k in on]
     common_columns = {c.lower() for c in dataframes[0].columns.tolist()}
 

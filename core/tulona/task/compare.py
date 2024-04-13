@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_VALUES = {
     "sample_count": 20,
+    "compare_column_composite": False,
 }
 
 
@@ -247,23 +248,7 @@ class CompareColumnTask(BaseTask):
     runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
-
-    def get_column_data(self, datasource, table, column):
-        connection_profile = get_connection_profile(
-            self.profile, self.project, datasource
-        )
-        conman = self.get_connection_manager(conn_profile=connection_profile)
-
-        query = get_column_query(table, column)
-        try:
-            log.debug(f"Trying unquoted column name: {column}")
-            df = get_query_output_as_df(connection_manager=conman, query_text=query)
-        except Exception as exp:
-            log.debug(f"Failed with error: {exp}")
-            log.debug(f'Trying quoted column name: "{column}"')
-            query = get_column_query(table, column, quoted=True)
-            df = get_query_output_as_df(connection_manager=conman, query_text=query)
-        return df
+    composite: bool = DEFAULT_VALUES["compare_column_composite"]
 
     def execute(self):
         log.info("------------------------ Starting task: compare-column")
@@ -281,13 +266,14 @@ class CompareColumnTask(BaseTask):
             ds_config = self.project["datasources"][ds_name]
 
             if "compare_column" in ds_config:
-                column = ds_config["compare_column"]
-                compare_columns.append(column)
+                columns = ds_config["compare_column"]
+                columns = [columns] if isinstance(columns, str) else columns
+                compare_columns.append(columns)
             else:
                 raise TulonaMissingPropertyError(
-                    "Property 'compare_column' must be specified for column comparison"
+                    "Property 'compare_column' must be specified"
+                    "in tulona-project.yml for column comparison"
                 )
-            log.debug(f"Extracting data for column {column}")
 
             dbtype = self.profile["profiles"][
                 extract_profile_name(self.project, ds_name)
@@ -304,21 +290,22 @@ class CompareColumnTask(BaseTask):
             table_fqn = get_table_fqn(database, schema, table)
             log.debug(f"Table FQN: {table_fqn}")
 
+            log.debug(f"Extracting data for column {columns}")
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(
                 self.profile, self.project, ds_name
             )
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
-            query = get_column_query(table_fqn, column)
+            query = get_column_query(table_fqn, columns)
             try:
-                log.debug(f"Trying unquoted column name: {column}")
+                log.debug(f"Trying unquoted column names: {columns}")
                 log.debug(f"Executing query: {query}")
                 df = get_query_output_as_df(connection_manager=conman, query_text=query)
             except Exception as exp:
                 log.warning(f"Failed with error: {exp}")
-                log.debug(f'Trying quoted column name: "{column}"')
-                query = get_column_query(table_fqn, column, quoted=True)
+                log.debug(f'Trying quoted column names: "{columns}"')
+                query = get_column_query(table_fqn, columns, quoted=True)
                 log.debug(f"Executing query: {query}")
                 df = get_query_output_as_df(connection_manager=conman, query_text=query)
 
@@ -330,34 +317,72 @@ class CompareColumnTask(BaseTask):
             df = df.rename(columns={c: c.lower() for c in df.columns})
             column_df_list.append(df)
 
-        compare_columns = {c.lower() for c in compare_columns}
+        compare_columns = {
+            tuple(map(lambda c: c.lower(), clist)) for clist in compare_columns
+        }
         if len(compare_columns) > 1:
             raise ValueError(
-                "Column comparison works only when the column name is same for both data source"
+                "Column comparison works only when the column name is same for all data sources"
                 "(not case sensitive)"
+                "and they have to be specified in the same order"
+                "in the config file for all data sources"
             )
+        compare_columns = compare_columns.pop()
+        log.debug(f"Final list of columns for comparison: {compare_columns}")
 
-        log.debug("Perform comparison")
-        df_comp = perform_comparison(
-            ds_compressed_names=ds_compressed_names,
-            dataframes=column_df_list,
-            on=compare_columns.pop(),
-            how="outer",
-            indicator="presence",
-            validate="one_to_one",
-        )
-        df_comp = df_comp[df_comp["presence"] != "both"]
-        df_comp["presence"] = df_comp["presence"].map(
-            {"left_only": ds_compressed_names[0], "right_only": ds_compressed_names[1]}
-        )
-        log.debug(f"Found {df_comp.shape[0]} mismatches both side combined")
+        output_dataframes = dict()
+        if self.composite:
+            log.debug(f"Performing composite comparison for: {compare_columns}")
+            df_comp = perform_comparison(
+                ds_compressed_names=ds_compressed_names,
+                dataframes=column_df_list,
+                on=compare_columns,
+                how="outer",
+                indicator="presence",
+                validate="one_to_one",
+            )
+            df_comp = df_comp[df_comp["presence"] != "both"]
+            df_comp["presence"] = df_comp["presence"].map(
+                {
+                    "left_only": ds_compressed_names[0],
+                    "right_only": ds_compressed_names[1],
+                }
+            )
+            log.debug(f"Found {df_comp.shape[0]} mismatches all sides combined")
+            output_dataframes["-".join(compare_columns)] = df_comp
+        else:
+            for c in compare_columns:
+                log.debug(f"Performing comparison for: {c}")
+                column_df_list_unique = [
+                    pd.DataFrame(df[c].drop_duplicates()) for df in column_df_list
+                ]
+                df_comp = perform_comparison(
+                    ds_compressed_names=ds_compressed_names,
+                    dataframes=column_df_list_unique,
+                    on=c,
+                    how="outer",
+                    indicator="presence",
+                    validate="one_to_one",
+                )
+                df_comp = df_comp[df_comp["presence"] != "both"]
+                df_comp["presence"] = df_comp["presence"].map(
+                    {
+                        "left_only": ds_compressed_names[0],
+                        "right_only": ds_compressed_names[1],
+                    }
+                )
+                log.debug(f"Found {df_comp.shape[0]} mismatches all sides combined")
+                output_dataframes[c] = df_comp
 
         log.debug(f"Writing output into: {self.outfile_fqn}")
         _ = create_dir_if_not_exist(self.project["outdir"])
-        with pd.ExcelWriter(
-            self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
-        ) as writer:
-            df_comp.to_excel(writer, sheet_name="Column Comparison", index=False)
+        for sheet, df in output_dataframes.items():
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                df.to_excel(
+                    writer, sheet_name=f"Column Comparison-> {sheet}", index=False
+                )
 
         end_time = time.time()
         log.info("------------------------ Finished task: compare-column")
@@ -372,6 +397,7 @@ class CompareTask(BaseTask):
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     sample_count: int = DEFAULT_VALUES["sample_count"]
+    composite: bool = DEFAULT_VALUES["compare_column_composite"]
 
     # Support for default values
     def __post_init__(self):
@@ -421,6 +447,7 @@ class CompareTask(BaseTask):
                 runtime=self.runtime,
                 datasources=self.datasources,
                 outfile_fqn=self.outfile_fqn,
+                composite=self.composite,
             ).execute()
         except Exception as exc:
             log.error(f"Column comparison failed with error: {exc}")

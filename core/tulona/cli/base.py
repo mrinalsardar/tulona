@@ -189,6 +189,7 @@ def compare_data(ctx, **kwargs):
 @p.outdir
 @p.verbose
 @p.datasources
+@p.composite
 def compare_column(ctx, **kwargs):
     """
     Column name must be specified for task: compare-column
@@ -238,6 +239,7 @@ def compare_column(ctx, **kwargs):
             runtime=ctx.obj["runtime"],
             datasources=datasource_list,
             outfile_fqn=outfile_fqn,
+            composite=kwargs["composite"],
         )
         task.execute()
 
@@ -250,6 +252,7 @@ def compare_column(ctx, **kwargs):
 @p.verbose
 @p.datasources
 @p.sample_count
+@p.composite
 def compare(ctx, **kwargs):
     """
     Compare everything(profiles, rows and columns) for the given datasoures
@@ -297,6 +300,7 @@ def compare(ctx, **kwargs):
             datasources=datasource_list,
             outfile_fqn=outfile_fqn,
             sample_count=kwargs["sample_count"],
+            composite=kwargs["composite"],
         )
         task.execute()
 

@@ -26,3 +26,10 @@ compare = click.option(
     is_flag=True,
     help="Can be used with profile task to compare profiles of different data sources",
 )
+
+composite = click.option(
+    "--composite",
+    is_flag=True,
+    help="Used with compare-column task to indicate if all columns are to be combined"
+    "for comparison. For example, ds1:column1-column2 vs ds2:column1-column2",
+)
