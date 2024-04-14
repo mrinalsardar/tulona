@@ -3,7 +3,7 @@ ruamel.yaml~=0.18
 psycopg2-binary~=2.9
 pymysql~=1.1
 cryptography~=42.0
-snowflake-sqlalchemy~=1.5
+snowflake-sqlalchemy==1.5 # can't upgrade or set to ~= until https://github.com/snowflakedb/snowflake-sqlalchemy/issues/485 is resolved
 pyodbc~=5.1
 pandas~=1.5 # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
 openpyxl~=3.1
