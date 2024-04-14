@@ -1,6 +1,6 @@
 [project]
 name = "tulona"
-version = "0.5.2"
+version = "0.5.4"
 description = "A tool to compare data from different sources."
 dependencies = [
   "click~=8.1",
@@ -8,11 +8,12 @@ dependencies = [
   "psycopg2-binary~=2.9",
   "pymysql~=1.1",
   "cryptography~=42.0",
-  "snowflake-sqlalchemy~=1.5",
+  "snowflake-sqlalchemy==1.5", # can't upgrade or set to ~= until https://github.com/snowflakedb/snowflake-sqlalchemy/issues/485 is resolved
   "pyodbc~=5.1",
   "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
   "openpyxl~=3.1",
   "Jinja2~=3.1",
+  "pydantic~=2.7",
 ]
 requires-python = ">= 3.8"
 authors = [
@@ -53,12 +54,12 @@ requires = ["setuptools >= 69.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["core/"]
+where = ["core"]
 include = ["tulona", "tulona.*"]
 
 [tool.black]
 line-length = 90
-target_version = ["py38", "py39", "py310", "py311"]
+target-version = ["py38", "py39", "py310", "py311"]
 exclude = '''
 
 (
@@ -114,7 +115,7 @@ line_length = 90
 skip = [".gitignore"]
 
 [tool.bumpversion]
-current_version = "0.5.2"
+current_version = "0.5.4"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
@@ -132,6 +133,3 @@ commit_args = ""
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
-
-[[tool.bumpversion.files]]
-filename = "core/setup.py"

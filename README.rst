@@ -201,7 +201,7 @@ To know more about any specific command, execute `tulona <command> -h`.
 
 Development Environment Setup
 -----------------------------
-* For live installation execute `pip install --editable core`.
+* For live installation execute `pip install -e .` and `pip install -r dev-requirements.txt`.
 
 
 Build wheel executable
