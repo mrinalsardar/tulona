@@ -1,0 +1,22 @@
+name: Github Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions: write-all
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Github release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release create ${{ github.ref_name }}
+        --generate-notes
+        --title "tulona ${{ github.ref_name }}"
