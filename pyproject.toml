@@ -59,7 +59,7 @@ include = ["tulona", "tulona.*"]
 
 [tool.black]
 line-length = 90
-target_version = ["py38", "py39", "py310", "py311"]
+target-version = ["py38", "py39", "py310", "py311"]
 exclude = '''
 
 (
