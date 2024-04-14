@@ -16,3 +16,4 @@ isort
 pytest-cov
 faker
 bump-my-version
+pydantic
