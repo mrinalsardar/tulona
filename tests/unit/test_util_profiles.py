@@ -25,6 +25,6 @@ def test_extract_profile_name(project, datasource, expected):
         ),
     ],
 )
-def test_get_connection_profile(profile, project, datasource, expected):
-    actual = get_connection_profile(profile, project, datasource)
+def test_get_connection_profile(profile, config, expected):
+    actual = get_connection_profile(profile, config)
     assert actual == expected

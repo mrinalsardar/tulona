@@ -64,9 +64,7 @@ class ProfileTask(BaseTask):
             table = ds_config["table"]
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
-            connection_profile = get_connection_profile(
-                self.profile, self.project, ds_name
-            )
+            connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             log.info(f"Profiling {ds_name}")

@@ -15,7 +15,7 @@ def extract_profile_name(project: Dict, datasource: str):
     return ds_profile_name
 
 
-def get_connection_profile(profile: Dict, project: Dict, datasource: str):
-    ds_profile_name = extract_profile_name(project, datasource)
+def get_connection_profile(profile: Dict, config: Dict):
+    ds_profile_name = config["connection_profile"]
     connection_profile = profile["profiles"][ds_profile_name]
     return connection_profile

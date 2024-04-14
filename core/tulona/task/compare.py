@@ -100,9 +100,7 @@ class CompareDataTask(BaseTask):
             table_fqns.append(table_fqn)
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
-            connection_profile = get_connection_profile(
-                self.profile, self.project, ds_name
-            )
+            connection_profile = get_connection_profile(self.profile, ds_config)
             connection_managers.append(
                 self.get_connection_manager(conn_profile=connection_profile)
             )
@@ -292,9 +290,7 @@ class CompareColumnTask(BaseTask):
 
             log.debug(f"Extracting data for column {columns}")
             log.debug(f"Acquiring connection to the database of: {ds_name}")
-            connection_profile = get_connection_profile(
-                self.profile, self.project, ds_name
-            )
+            connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             query = get_column_query(table_fqn, columns)
