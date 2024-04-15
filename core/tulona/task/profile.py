@@ -16,6 +16,10 @@ from tulona.util.profiles import extract_profile_name, get_connection_profile
 
 log = logging.getLogger(__name__)
 
+DEFAULT_VALUES = {
+    "compare_profiles": False,
+}
+
 
 @dataclass
 class ProfileTask(BaseTask):
@@ -24,7 +28,7 @@ class ProfileTask(BaseTask):
     runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
-    compare: bool = False
+    compare: bool = DEFAULT_VALUES["compare_profiles"]
 
     # Support for default values
     def __post_init__(self):
