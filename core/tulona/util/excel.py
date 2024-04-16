@@ -1,5 +1,7 @@
-from typing import List, Tuple, Union
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
 
+import pandas as pd
 from openpyxl import load_workbook, styles
 from openpyxl.styles import Border, Side
 from openpyxl.worksheet.worksheet import Worksheet
@@ -80,3 +82,11 @@ def highlight_mismatch_cells(  # pargma: no cover
                         row[col_idx + i].border = middle_border
 
     wb.save(excel_file)
+
+
+def dataframes_into_excel(
+    sheet_df_map: Dict, outfile_fqn: Union[Path, str], mode: str
+) -> None:
+    with pd.ExcelWriter(outfile_fqn, mode=mode) as writer:
+        for sheet, df in sheet_df_map.items():
+            df.to_excel(writer, sheet_name=sheet, index=False)
