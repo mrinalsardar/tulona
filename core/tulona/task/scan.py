@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
+from tulona.exceptions import TulonaNotImplementedError
 from tulona.task.base import BaseTask
 from tulona.util.excel import dataframes_into_excel
 from tulona.util.filesystem import create_dir_if_not_exist
@@ -46,6 +47,7 @@ class ScanTask(BaseTask):
             ds_compressed = ds_name.replace("_", "")
             ds_name_compressed_list.append(ds_compressed)
             ds_config = self.project["datasources"][ds_name]
+            scan_result[ds_name] = {}
 
             dbtype = self.profile["profiles"][
                 extract_profile_name(self.project, ds_name)
@@ -95,6 +97,7 @@ class ScanTask(BaseTask):
                 columns={c: c.lower() for c in schemata_df.columns}
             )
             write_map[ds_compressed] = schemata_df
+            scan_result[ds_name]["database"] = {database: schemata_df}
 
             # Schema scan
             schema_list = schemata_df["schema_name"].tolist()
@@ -116,7 +119,7 @@ class ScanTask(BaseTask):
                 tables_df = tables_df.rename(
                     columns={c: c.lower() for c in tables_df.columns}
                 )
-                scan_result[ds_name] = {schema: tables_df}
+                scan_result[ds_name]["schema"] = {f"{database}_{schema}": tables_df}
                 write_map[f"{ds_compressed}_{schema}"] = tables_df
 
         # Writing scan result
@@ -128,12 +131,17 @@ class ScanTask(BaseTask):
             mode="a" if os.path.exists(self.outfile_fqn) else "w",
         )
 
-        # # Compare database extracts
-        # if self.compare:
-        #     log.debug("Preparing metadata comparison")
-        #     df_merge = perform_comparison(
-        #         ds_name_compressed_list, df_collection, "column_name"
-        #     )
+        # Compare database extracts
+        if self.compare:
+            # log.debug("Preparing metadata comparison")
+            # databases = [list(scan_result[k]["database"].keys())[0] for k in scan_result]
+            # dataframes = [
+            #     list(scan_result[k]["database"].values())[0] for k in scan_result
+            # ]
+            # df_merge = perform_comparison(databases, dataframes, "column_name")
+            raise TulonaNotImplementedError(
+                "Scan result comparison has not been implemented yet"
+            )
 
         end_time = time.time()
         log.info("Finished task: scan")
