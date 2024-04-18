@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
-from tulona.exceptions import TulonaNotImplementedError
 from tulona.task.base import BaseTask
+from tulona.task.helper import perform_comparison
 from tulona.util.excel import dataframes_into_excel
-from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.filesystem import create_dir_if_not_exist, get_outfile_fqn
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.sql import get_query_output_as_df
 
@@ -33,14 +33,13 @@ class ScanTask(BaseTask):
     compare: bool = DEFAULT_VALUES["compare_scans"]
 
     def execute(self):
-        log.info("Starting task: scan")
+        log.info(f"Starting task: scan{' --compare' if self.compare else ''}")
         log.debug(f"Datasource: {self.datasources}")
         log.debug(f"Compare: {self.compare}")
         log.debug(f"Output file: {self.outfile_fqn}")
         start_time = time.time()
 
         scan_result = {}
-        write_map = {}
         ds_name_compressed_list = []
         for ds_name in self.datasources:
             log.info(f"Processing datasource {ds_name}")
@@ -48,6 +47,8 @@ class ScanTask(BaseTask):
             ds_name_compressed_list.append(ds_compressed)
             ds_config = self.project["datasources"][ds_name]
             scan_result[ds_name] = {}
+            scan_result[ds_name]["database"] = {}
+            scan_result[ds_name]["schema"] = {}
 
             dbtype = self.profile["profiles"][
                 extract_profile_name(self.project, ds_name)
@@ -62,6 +63,9 @@ class ScanTask(BaseTask):
                 database = ds_config["database"]
             else:
                 database = "def"
+
+            # Create output directory
+            _ = create_dir_if_not_exist(self.project["outdir"])
 
             # Database scan
             log.debug(f"Performing database scan for: {database}")
@@ -88,61 +92,142 @@ class ScanTask(BaseTask):
                     )
                 """
             log.debug(f"Executing query: {schemata_query}")
-            schemata_df = get_query_output_as_df(
+            dbextract_df = get_query_output_as_df(
                 connection_manager=conman, query_text=schemata_query
             )
-            log.debug(f"Number of schemas found: {schemata_df.shape[0]}")
+            log.debug(f"Number of schemas found: {dbextract_df.shape[0]}")
 
-            schemata_df = schemata_df.rename(
-                columns={c: c.lower() for c in schemata_df.columns}
+            dbextract_df = dbextract_df.rename(
+                columns={c: c.lower() for c in dbextract_df.columns}
             )
-            write_map[ds_compressed] = schemata_df
-            scan_result[ds_name]["database"] = {database: schemata_df}
+
+            if not self.compare:
+                # Writing scan result
+                dbscan_outfile_fqn = get_outfile_fqn(
+                    outdir=self.project["outdir"],
+                    ds_list=[ds_compressed],
+                    infix="scan",
+                )
+                log.debug(f"Writing db scan result into: {dbscan_outfile_fqn}")
+                dataframes_into_excel(
+                    sheet_df_map={database: dbextract_df},
+                    outfile_fqn=dbscan_outfile_fqn,
+                    mode="a" if os.path.exists(dbscan_outfile_fqn) else "w",
+                )
+
+            scan_result[ds_name]["database"][database] = dbextract_df
 
             # Schema scan
-            schema_list = schemata_df["schema_name"].tolist()
+            schema_list = dbextract_df["schema_name"].tolist()
             for schema in schema_list:
-                log.debug(f"Performing schema scan for: {schema}")
+                log.debug(f"Performing schema scan for: {database}.{schema}")
                 tables_query = f"""
                 select
                     *
                 from
                     information_schema.tables
                 where
-                    upper(table_schema) = '{schema.upper()}'
+                    upper(table_catalog) = '{database.upper()}'
+                    and upper(table_schema) = '{schema.upper()}'
                 """
                 log.debug(f"Executing query: {tables_query}")
-                tables_df = get_query_output_as_df(
+                schemaextract_df = get_query_output_as_df(
                     connection_manager=conman, query_text=tables_query
                 )
-                log.debug(f"Number of tables found: {tables_df.shape[0]}")
-                tables_df = tables_df.rename(
-                    columns={c: c.lower() for c in tables_df.columns}
+                log.debug(f"Number of tables found: {schemaextract_df.shape[0]}")
+                schemaextract_df = schemaextract_df.rename(
+                    columns={c: c.lower() for c in schemaextract_df.columns}
                 )
-                scan_result[ds_name]["schema"] = {f"{database}_{schema}": tables_df}
-                write_map[f"{ds_compressed}_{schema}"] = tables_df
 
-        # Writing scan result
-        log.debug(f"Writing scan result into: {self.outfile_fqn}")
-        _ = create_dir_if_not_exist(self.project["outdir"])
-        dataframes_into_excel(
-            sheet_df_map=write_map,
-            outfile_fqn=self.outfile_fqn,
-            mode="a" if os.path.exists(self.outfile_fqn) else "w",
-        )
+                if not self.compare:
+                    # Writing scan result
+                    schemascan_outfile_fqn = get_outfile_fqn(
+                        outdir=self.project["outdir"],
+                        ds_list=[f"{ds_compressed}_{schema}"],
+                        infix="scan",
+                    )
+                    log.debug(
+                        f"Writing schema scan result into: {schemascan_outfile_fqn}"
+                    )
+                    dataframes_into_excel(
+                        sheet_df_map={schema: schemaextract_df},
+                        outfile_fqn=schemascan_outfile_fqn,
+                        mode="a" if os.path.exists(schemascan_outfile_fqn) else "w",
+                    )
+                scan_result[ds_name]["schema"][f"{database}.{schema}"] = schemaextract_df
+                # write_map[f"{ds_compressed}_{schema}"] = schemaextract_df
 
-        # Compare database extracts
         if self.compare:
-            # log.debug("Preparing metadata comparison")
-            # databases = [list(scan_result[k]["database"].keys())[0] for k in scan_result]
-            # dataframes = [
-            #     list(scan_result[k]["database"].values())[0] for k in scan_result
-            # ]
-            # df_merge = perform_comparison(databases, dataframes, "column_name")
-            raise TulonaNotImplementedError(
-                "Scan result comparison has not been implemented yet"
+            log.debug("Preparing metadata comparison")
+
+            # Compare database extracts
+            databases = [list(scan_result[k]["database"].keys())[0] for k in scan_result]
+            db_frames = [
+                list(scan_result[k]["database"].values())[0] for k in scan_result
+            ]
+            log.debug(f"Comparing databases: {' vs '.join(databases)}")
+            db_comp = perform_comparison(
+                databases,
+                db_frames,
+                on="schema_name",
+                how="outer",
+                suffixes=ds_name_compressed_list,
+                indicator="presence",
             )
 
+            # Writing database comparison result
+            dbcomp_outfile_fqn = get_outfile_fqn(
+                outdir=self.project["outdir"],
+                ds_list=databases,
+                infix="scan",
+            )
+            log.debug(f"Writing db scan comparison result into: {dbcomp_outfile_fqn}")
+            dataframes_into_excel(
+                sheet_df_map={f"db_{'|'.join(databases)}": db_comp},
+                outfile_fqn=dbcomp_outfile_fqn,
+                mode="a" if os.path.exists(dbcomp_outfile_fqn) else "w",
+            )
+
+            # Compare schema extracts
+            common_schemas = db_comp[db_comp["presence"] == "both"][
+                "schema_name"
+            ].tolist()
+
+            for sc in common_schemas:
+                log.debug(f"Comparing schema: {sc}")
+                schema_fqns = [f"{db}.{sc}" for db in databases]
+                schema_compressed = [
+                    sf.replace(".", "").replace("_", "") for sf in schema_fqns
+                ]
+                schema_frames = [
+                    scan_result[ds_name]["schema"][f"{db}.{sc}"]
+                    for ds_name, db in zip(self.datasources, databases)
+                ]
+
+                schema_comp = perform_comparison(
+                    schema_fqns,
+                    schema_frames,
+                    on="table_name",
+                    how="outer",
+                    suffixes=schema_compressed,
+                    indicator="presence",
+                )
+
+                # Writing schema comparison result
+                schemacomp_outfile_fqn = get_outfile_fqn(
+                    outdir=self.project["outdir"],
+                    ds_list=schema_compressed,
+                    infix="scan",
+                )
+                log.debug(
+                    f"Writing schema scan comparison result into: {schemacomp_outfile_fqn}"
+                )
+                dataframes_into_excel(
+                    sheet_df_map={"|".join(schema_compressed): schema_comp},
+                    outfile_fqn=schemacomp_outfile_fqn,
+                    mode="a" if os.path.exists(schemacomp_outfile_fqn) else "w",
+                )
+
         end_time = time.time()
-        log.info("Finished task: scan")
+        log.info(f"Finished task: scan{' --compare' if self.compare else ''}")
         log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")

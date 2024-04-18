@@ -11,7 +11,7 @@ jobs:
   deploy:
     if: github.event.pull_request.merged
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: release
     permissions: write-all
     steps:
     - name: Checkout repository

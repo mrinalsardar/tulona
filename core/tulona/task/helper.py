@@ -2,7 +2,6 @@ import logging
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
-
 from tulona.adapter.connection import ConnectionManager
 from tulona.util.sql import (
     get_metadata_query,
@@ -91,12 +90,13 @@ def perform_comparison(
     for df in dataframes[1:]:
         colset = {c.lower() for c in df.columns.tolist()}
         common_columns = common_columns.intersection(colset)
+    log.debug(f"Common columns: {common_columns}")
 
     for ds_name, df in zip(ds_compressed_names, dataframes):
         df = df[list(common_columns)]
         df = df.rename(
             columns={
-                c: f"{c}_{ds_name}" if c.lower() not in primary_key else c
+                c: f"{c}-{ds_name}" if c.lower() not in primary_key else c
                 for c in df.columns
             }
         )
@@ -116,6 +116,9 @@ def perform_comparison(
             indicator=indicator,
             validate=validate,
         )
+
     df_merge = df_merge[sorted(df_merge.columns.tolist())]
+    new_columns = primary_key + [col for col in df_merge if col not in primary_key]
+    df_merge = df_merge[new_columns]
 
     return df_merge

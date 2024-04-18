@@ -5,9 +5,9 @@ services:
     image: postgres:latest
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: tulona
+      POSTGRES_DB: postgresdb
+      POSTGRES_PASSWORD: anolut
     ports:
       - "5432:5432"
     volumes:
@@ -17,10 +17,10 @@ services:
     image: mysql:latest
     restart: always
     environment:
-      MYSQL_DATABASE: 'db'
-      MYSQL_USER: 'user'
-      MYSQL_PASSWORD: 'password'
-      MYSQL_ROOT_PASSWORD: 'toor'
+      MYSQL_DATABASE: corporate
+      MYSQL_USER: tulona
+      MYSQL_PASSWORD: anolut
+      MYSQL_ROOT_PASSWORD: toor
     volumes:
       - mysql-data:/var/lib/mysql
     ports:
