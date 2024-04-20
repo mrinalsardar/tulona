@@ -1,12 +1,14 @@
 import logging
 import os
 import time
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
+from tulona.task.compare import CompareTask
 from tulona.task.helper import perform_comparison
 from tulona.util.excel import dataframes_into_excel
 from tulona.util.filesystem import create_dir_if_not_exist, get_outfile_fqn
@@ -17,6 +19,8 @@ log = logging.getLogger(__name__)
 
 DEFAULT_VALUES = {
     "compare_scans": False,
+    "sample_count": 20,
+    "compare_column_composite": False,
 }
 META_EXCLUSION = {
     "schemas": ["INFORMATION_SCHEMA", "PERFORMANCE_SCHEMA"],
@@ -31,6 +35,8 @@ class ScanTask(BaseTask):
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     compare: bool = DEFAULT_VALUES["compare_scans"]
+    sample_count: int = DEFAULT_VALUES["sample_count"]
+    composite: bool = DEFAULT_VALUES["compare_column_composite"]
 
     def execute(self):
         log.info(f"Starting task: scan{' --compare' if self.compare else ''}")
@@ -41,6 +47,8 @@ class ScanTask(BaseTask):
 
         scan_result = {}
         ds_name_compressed_list = []
+        connection_profile_names = []
+        primary_keys = []
         for ds_name in self.datasources:
             log.info(f"Processing datasource {ds_name}")
             ds_compressed = ds_name.replace("_", "")
@@ -49,11 +57,16 @@ class ScanTask(BaseTask):
             scan_result[ds_name] = {}
             scan_result[ds_name]["database"] = {}
             scan_result[ds_name]["schema"] = {}
+            if "primary_key" in ds_config:
+                primary_keys.append(ds_config["primary_key"])
 
-            dbtype = self.profile["profiles"][
-                extract_profile_name(self.project, ds_name)
-            ]["type"]
-            log.debug(f"Database type: {dbtype}")
+            connection_profile_name = extract_profile_name(self.project, ds_name)
+            connection_profile_names.append(connection_profile_name)
+            dbtype = self.profile["profiles"][connection_profile_name]["type"]
+            log.debug(
+                f"Connection profile: {connection_profile_name} | Database type: {dbtype}"
+            )
+            scan_result[ds_name]["dbtype"] = dbtype
 
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
@@ -88,7 +101,7 @@ class ScanTask(BaseTask):
                 where
                     upper(catalog_name) = '{database.upper()}'
                     and upper(schema_name) not in (
-                        {"', '".join(META_EXCLUSION['schemas'])}
+                        '{"', '".join(META_EXCLUSION['schemas'])}'
                     )
                 """
             log.debug(f"Executing query: {schemata_query}")
@@ -157,6 +170,23 @@ class ScanTask(BaseTask):
                 scan_result[ds_name]["schema"][f"{database}.{schema}"] = schemaextract_df
                 # write_map[f"{ds_compressed}_{schema}"] = schemaextract_df
 
+        # Handle primary keys for table comparison
+        table_primary_key = list(set(primary_keys))
+        if not table_primary_key or len(primary_keys) != len(ds_name_compressed_list):
+            log.warning(
+                "Primary key[s] is[are] not specified for any/all datasources up for comparison"
+                " face to face otherwise table comparison won't work."
+                "In future tulona will try to extract primary key from table metadata"
+                "but not yet."
+            )
+            table_primary_key = None
+        if table_primary_key and len(table_primary_key) > 1:
+            log.warning(
+                "Primary key[s] must be same for all datasources up for comparison face to face"
+                "otherwise table comparison won't work"
+            )
+            table_primary_key = None
+
         if self.compare:
             log.debug("Preparing metadata comparison")
 
@@ -165,6 +195,7 @@ class ScanTask(BaseTask):
             db_frames = [
                 list(scan_result[k]["database"].values())[0] for k in scan_result
             ]
+            dbtypes = [scan_result[k]["dbtype"] for k in scan_result]
             log.debug(f"Comparing databases: {' vs '.join(databases)}")
             db_comp = perform_comparison(
                 databases,
@@ -192,6 +223,7 @@ class ScanTask(BaseTask):
             common_schemas = db_comp[db_comp["presence"] == "both"][
                 "schema_name"
             ].tolist()
+            log.debug(f"Number of common schemas found: {len(common_schemas)}")
 
             for sc in common_schemas:
                 log.debug(f"Comparing schema: {sc}")
@@ -227,6 +259,70 @@ class ScanTask(BaseTask):
                     outfile_fqn=schemacomp_outfile_fqn,
                     mode="a" if os.path.exists(schemacomp_outfile_fqn) else "w",
                 )
+
+                # Compare tables
+                if table_primary_key:
+                    common_tables = schema_comp[schema_comp["presence"] == "both"][
+                        "table_name"
+                    ].tolist()
+                    log.debug(
+                        f"Number of common_tables found in schema {sc}: {len(common_tables)}"
+                    )
+
+                    sc_comp = sc.replace("_", "")
+                    dynamic_project_config = deepcopy(self.project["datasources"])
+                    dynamic_project_config["datasources"] = {}
+                    if "source_map" in dynamic_project_config:
+                        dynamic_project_config.pop("source_map")
+                    for table in common_tables:
+                        log.debug(f"Comparing table: {sc}.{table}")
+
+                        source_map_item = []
+                        for ds_name, db, typ, cpn in zip(
+                            ds_name_compressed_list,
+                            databases,
+                            dbtypes,
+                            connection_profile_names,
+                        ):
+                            table_ds_config = {
+                                "connection_profile": cpn,
+                                "schema": sc,
+                                "table": table,
+                                "primary_key": table_primary_key,
+                                "compare_column": table_primary_key,
+                            }
+                            if typ != "mysql":
+                                table_ds_config["database"] = db
+
+                            dyn_ds_name = f"{ds_name}_{sc_comp}_{table.replace('_', '')}"
+                            dynamic_project_config["datasources"][
+                                dyn_ds_name
+                            ] = table_ds_config
+                            log.debug(
+                                f"Datasource: {dyn_ds_name} | Config: {table_ds_config}"
+                            )
+                            source_map_item.append(dyn_ds_name)
+
+                        table_outfile_fqn = get_outfile_fqn(
+                            outdir=self.project["outdir"],
+                            ds_list=[
+                                ds.split(":")[0].replace("_", "")
+                                for ds in source_map_item
+                            ],
+                            infix="comparison",
+                        )
+
+                        # Execute CompareTask
+                        log.debug(f"Executing CompareTask for: {source_map_item}")
+                        CompareTask(
+                            profile=self.profile,
+                            project=dynamic_project_config,
+                            runtime=self.runtime,
+                            datasources=source_map_item,
+                            outfile_fqn=table_outfile_fqn,
+                            sample_count=self.sample_count,
+                            composite=self.composite,
+                        ).execute()
 
         end_time = time.time()
         log.info(f"Finished task: scan{' --compare' if self.compare else ''}")

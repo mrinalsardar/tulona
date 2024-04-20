@@ -72,6 +72,8 @@ def ping(ctx, **kwargs):
 @p.verbose
 @p.datasources
 @p.compare
+@p.sample_count
+@p.composite
 def scan(ctx, **kwargs):
     """Scan data sources to collect metadata"""
 
@@ -127,6 +129,8 @@ def scan(ctx, **kwargs):
             datasources=datasource_list,
             outfile_fqn=outfile_fqn,
             compare=kwargs["compare"],
+            sample_count=kwargs["sample_count"],
+            composite=kwargs["composite"],
         )
         task.execute()
 
