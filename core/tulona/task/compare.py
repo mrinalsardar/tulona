@@ -1,17 +1,18 @@
 import logging
 import os
 import time
+from copy import deepcopy
 from dataclasses import _MISSING_TYPE, dataclass, fields
 from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
-
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
 from tulona.task.helper import perform_comparison
 from tulona.task.profile import ProfileTask
+from tulona.util.database import get_table_primary_keys
 from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
@@ -51,38 +52,31 @@ class CompareDataTask(BaseTask):
             ):
                 setattr(self, field.name, field.default)
 
-    def execute(self):
-        log.info("------------------------ Starting task: compare-data")
-        start_time = time.time()
-
-        if len(self.datasources) != 2:
-            raise ValueError("Data comparison needs two data sources.")
-
-        log.info(f"Comparing {self.datasources}")
-
+    def extract_confs(self):
         # TODO: Add support for different names of primary keys in different tables
         # Check if primary key[s] is[are] specified for row comparison
-        primary_keys = set()
-        ds_names = []
-        ds_name_compressed_list = []
-        ds_configs = []
-        dbtypes = []
-        table_fqns = []
-        connection_managers = []
-        exclude_columns_lol = []
+        econf_dict = {}
+        primary_keys = []
+        econf_dict["ds_names"] = []
+        econf_dict["ds_name_compressed_list"] = []
+        econf_dict["ds_configs"] = []
+        econf_dict["dbtypes"] = []
+        econf_dict["table_fqns"] = []
+        econf_dict["connection_managers"] = []
+        econf_dict["exclude_columns_lol"] = []
         for ds_name in self.datasources:
             log.debug(f"Extracting configs for: {ds_name}")
             # Extract data source name from datasource:column combination
             ds_name = ds_name.split(":")[0]
-            ds_names.append(ds_name)
-            ds_name_compressed_list.append(ds_name.replace("_", ""))
+            econf_dict["ds_names"].append(ds_name)
+            econf_dict["ds_name_compressed_list"].append(ds_name.replace("_", ""))
 
             ds_config = self.project["datasources"][ds_name]
-            ds_configs.append(ds_config)
+            econf_dict["ds_configs"].append(ds_config)
             dbtype = self.profile["profiles"][
                 extract_profile_name(self.project, ds_name)
             ]["type"]
-            dbtypes.append(dbtype)
+            econf_dict["dbtypes"].append(dbtype)
 
             # MySQL doesn't have logical database
             if "database" in ds_config and dbtype.lower() != "mysql":
@@ -97,49 +91,86 @@ class CompareDataTask(BaseTask):
                 schema,
                 table,
             )
-            table_fqns.append(table_fqn)
+            econf_dict["table_fqns"].append(table_fqn)
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(self.profile, ds_config)
-            connection_managers.append(
-                self.get_connection_manager(conn_profile=connection_profile)
-            )
+            conman = self.get_connection_manager(conn_profile=connection_profile)
+            econf_dict["connection_managers"].append(conman)
 
             exclude_columns = (
                 ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
             )
             if isinstance(exclude_columns, str):
                 exclude_columns = [exclude_columns]
-            exclude_columns_lol.append(exclude_columns)
+            econf_dict["exclude_columns_lol"].append(exclude_columns)
 
             if "primary_key" in ds_config:
-                primary_keys.add(
+                ds_pk = (
                     (ds_config["primary_key"],)
                     if isinstance(ds_config["primary_key"], str)
                     else tuple(sorted(ds_config["primary_key"]))
                 )
+                log.debug(f"Provided primary key for table {table}: {ds_pk}")
+            else:
+                log.debug(
+                    f"Primary key not provided for {table}[{ds_name}]"
+                    " Tulona will try to extract it from table metadata"
+                )
+                ds_pk = tuple(get_table_primary_keys(conman.engine, schema, table))
+                log.debug(f"Extracted primary key for table {table}[{ds_name}]: {ds_pk}")
+
+            if len(ds_pk) > 0:
+                primary_keys.append(ds_pk)
+
+        pk_ci_set = {tuple(map(lambda x: x.lower(), k)) for k in primary_keys}
 
         if len(primary_keys) == 0:
             raise TulonaMissingPrimaryKeyError(
-                "Primary key must be provided for comparison"
+                "Primary key[s] is[are] not available. Abort!"
+            )
+        elif len(primary_keys) > 0:
+            if len(primary_keys) != len(primary_keys):
+                raise TulonaMissingPrimaryKeyError(
+                    "If primary key is provided, it must be provided for all datasources"
+                )
+
+            if len(pk_ci_set) > 1:
+                raise ValueError(
+                    "Primary key must be same in all candidate tables for comparison"
+                )
+            econf_dict["primary_key"] = primary_keys[0]
+            log.debug(f"Final primary key: {econf_dict['primary_key']}")
+        else:
+            raise TulonaMissingPrimaryKeyError(
+                f"Primary key for {table_fqn}[{ds_name}] could not be found."
+                " Row comparison without primary key has not been implemented yet."
+                " Abort!"
             )
 
-        if len(primary_keys) > 1:
-            raise ValueError(
-                "Primary key must be same in all candidate tables for comparison"
-            )
-        primary_key = primary_keys.pop()
+        return econf_dict
+
+    def execute(self):
+        log.info("------------------------ Starting task: compare-data")
+        start_time = time.time()
+
+        if len(self.datasources) != 2:
+            raise ValueError("Data comparison needs two data sources.")
 
         # Config extraction
-        dbtype1, dbtype2 = dbtypes
-        table_fqn1, table_fqn2 = table_fqns
-        conman1, conman2 = connection_managers
-        exclude_columns1, exclude_columns2 = exclude_columns_lol
+        econf_dict = self.extract_confs()
+        dbtype1, dbtype2 = econf_dict["dbtypes"]
+        table_fqn1, table_fqn2 = econf_dict["table_fqns"]
+        conman1, conman2 = econf_dict["connection_managers"]
+        exclude_columns1, exclude_columns2 = econf_dict["exclude_columns_lol"]
 
         # TODO: push column exclusion down to the database/query
-        primary_key = tuple([k.lower() for k in primary_key])
+        # TODO: We probably don't need to create pk tuple out of pk
+        # lists as that is already happening while extracting pks
+        primary_key = tuple([k.lower() for k in econf_dict["primary_key"]])
         query_expr = None
 
+        log.info(f"Comparing {self.datasources}")
         i = 0
         while i < 5:
             log.debug(f"Extraction iteration: {i + 1}/5")
@@ -159,8 +190,8 @@ class CompareDataTask(BaseTask):
                     raise ValueError(f"Primary key {k} not present in {table_fqn1}")
 
             # Exclude columns
-            log.debug(f"Excluding columns from {table_fqn1}")
-            if len(exclude_columns1):
+            if len(exclude_columns1) > 0:
+                log.debug(f"Excluding columns from {table_fqn1}: {exclude_columns1}")
                 df1 = apply_column_exclusion(
                     df1, primary_key, exclude_columns1, table_fqn1
                 )
@@ -182,8 +213,8 @@ class CompareDataTask(BaseTask):
                     raise ValueError(f"Primary key {k} not present in {table_fqn2}")
 
             # Exclude columns
-            log.debug(f"Excluding columns from {table_fqn2}")
-            if len(exclude_columns2):
+            if len(exclude_columns2) > 0:
+                log.debug(f"Excluding columns from {table_fqn2}: {exclude_columns2}")
                 df2 = apply_column_exclusion(
                     df2, primary_key, exclude_columns2, table_fqn2
                 )
@@ -205,15 +236,18 @@ class CompareDataTask(BaseTask):
                 f"Could not find common data between {table_fqn1} and {table_fqn2}"
             )
 
-        log.debug("Preparing row comparison")
+        log.debug(
+            f"Preparing row comparison for: {econf_dict['ds_name_compressed_list']}"
+        )
         df_row_comp = perform_comparison(
-            ds_compressed_names=ds_name_compressed_list,
+            ds_compressed_names=econf_dict["ds_name_compressed_list"],
             dataframes=row_data_list,
             on=primary_key,
         )
         log.debug(f"Prepared comparison for {df_row_comp.shape[0]} rows")
 
         log.debug(f"Writing comparison result into: {self.outfile_fqn}")
+        # TODO: Remove it as it is already happening in perform_comparison
         # Moving key columns to the beginning
         new_columns = list(primary_key) + [
             col for col in df_row_comp if col not in primary_key
@@ -270,7 +304,7 @@ class CompareColumnTask(BaseTask):
             else:
                 raise TulonaMissingPropertyError(
                     "Property 'compare_column' must be specified"
-                    "in tulona-project.yml for column comparison"
+                    " in project config for column comparison"
                 )
 
             dbtype = self.profile["profiles"][
@@ -319,9 +353,9 @@ class CompareColumnTask(BaseTask):
         if len(compare_columns) > 1:
             raise ValueError(
                 "Column comparison works only when the column name is same for all data sources"
-                "(not case sensitive)"
-                "and they have to be specified in the same order"
-                "in the config file for all data sources"
+                " (not case sensitive)"
+                " and they have to be specified in the same order"
+                " in the config file for all data sources"
             )
         compare_columns = compare_columns.pop()
         log.debug(f"Final list of columns for comparison: {compare_columns}")
@@ -423,23 +457,30 @@ class CompareTask(BaseTask):
             log.error(f"Profiling failed with error: {exc}")
 
         # Row comparison
+        primary_key = None
+        cdt = CompareDataTask(
+            profile=self.profile,
+            project=self.project,
+            runtime=self.runtime,
+            datasources=self.datasources,
+            outfile_fqn=self.outfile_fqn,
+            sample_count=self.sample_count,
+        )
         try:
-            CompareDataTask(
-                profile=self.profile,
-                project=self.project,
-                runtime=self.runtime,
-                datasources=self.datasources,
-                outfile_fqn=self.outfile_fqn,
-                sample_count=self.sample_count,
-            ).execute()
+            primary_key = cdt.extract_confs()["primary_key"]
+            cdt.execute()
         except Exception as exc:
             log.error(f"Row comparison failed with error: {exc}")
 
         # Column comparison
+        project_copy = deepcopy(self.project)
+        for ds in project_copy["datasources"]:
+            if "compare_column" not in ds and primary_key:
+                project_copy["datasources"][ds]["compare_column"] = primary_key
         try:
             CompareColumnTask(
                 profile=self.profile,
-                project=self.project,
+                project=project_copy,
                 runtime=self.runtime,
                 datasources=self.datasources,
                 outfile_fqn=self.outfile_fqn,

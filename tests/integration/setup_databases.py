@@ -5,8 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from faker import Faker
-
-# from sqlalchemy import create_engine, schema
+from sqlalchemy import create_engine
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -17,6 +16,8 @@ conn_str_list = [
     "postgresql://tulona:anolut@localhost:5432/postgresdb",
     "mysql+pymysql://tulona:anolut@localhost:3306/corporate",
 ]
+
+# primary_keys = {"employee": "(Employee_ID)", "people_composite_key": "(ID_1, ID_2)"}
 
 if __name__ == "__main__":
     log.info("Loading sample data into postgres and mysql tables")
@@ -71,3 +72,8 @@ if __name__ == "__main__":
                     table_name, conn, schema=schema_name, if_exists="replace", index=False
                 )
                 # df.to_sql(table_name, conn, if_exists="replace", index=False)
+
+                # TODO: Do this manually for now
+                # conn.execute(
+                #     f"alter table {schema_name}.{table_name} add primary key {primary_keys[table_name]};"
+                # )

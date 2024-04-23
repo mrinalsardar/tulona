@@ -170,25 +170,24 @@ class ScanTask(BaseTask):
                 scan_result[ds_name]["schema"][f"{database}.{schema}"] = schemaextract_df
                 # write_map[f"{ds_compressed}_{schema}"] = schemaextract_df
 
-        # Handle primary keys for table comparison
-        table_primary_key = list(set(primary_keys))
-        if not table_primary_key or len(primary_keys) != len(ds_name_compressed_list):
-            log.warning(
-                "Primary key[s] is[are] not specified for any/all datasources up for comparison"
-                " face to face otherwise table comparison won't work."
-                "In future tulona will try to extract primary key from table metadata"
-                "but not yet."
-            )
-            table_primary_key = None
-        if table_primary_key and len(table_primary_key) > 1:
-            log.warning(
-                "Primary key[s] must be same for all datasources up for comparison face to face"
-                "otherwise table comparison won't work"
-            )
-            table_primary_key = None
-
         if self.compare:
             log.debug("Preparing metadata comparison")
+
+            # Handle primary keys for table comparison
+            table_primary_key = list(set(primary_keys))
+            if not table_primary_key or len(primary_keys) != len(ds_name_compressed_list):
+                log.warning(
+                    "Primary key is not specified for one/all"
+                    f" comparison candidate datasources: {self.datasources}"
+                    " Tulona will attempt to extract it from table metadata."
+                )
+                table_primary_key = None
+            if table_primary_key and len(table_primary_key) > 1:
+                log.warning(
+                    "Primary key[s] must be same for all candidate datasources for comparison"
+                    " otherwise table comparison won't work."
+                )
+                table_primary_key = None
 
             # Compare database extracts
             databases = [list(scan_result[k]["database"].keys())[0] for k in scan_result]
@@ -198,12 +197,19 @@ class ScanTask(BaseTask):
             dbtypes = [scan_result[k]["dbtype"] for k in scan_result]
             log.debug(f"Comparing databases: {' vs '.join(databases)}")
             db_comp = perform_comparison(
-                databases,
-                db_frames,
+                ds_compressed_names=databases,
+                dataframes=db_frames,
                 on="schema_name",
                 how="outer",
                 suffixes=ds_name_compressed_list,
                 indicator="presence",
+            )
+            db_comp["presence"] = db_comp["presence"].map(
+                {
+                    "both": "both",
+                    "left_only": ds_name_compressed_list[0],
+                    "right_only": ds_name_compressed_list[1],
+                }
             )
 
             # Writing database comparison result
@@ -261,68 +267,67 @@ class ScanTask(BaseTask):
                 )
 
                 # Compare tables
-                if table_primary_key:
-                    common_tables = schema_comp[schema_comp["presence"] == "both"][
-                        "table_name"
-                    ].tolist()
-                    log.debug(
-                        f"Number of common_tables found in schema {sc}: {len(common_tables)}"
+                common_tables = schema_comp[schema_comp["presence"] == "both"][
+                    "table_name"
+                ].tolist()
+                log.debug(
+                    f"Number of common_tables found in schema {sc}: {len(common_tables)}"
+                )
+
+                sc_comp = sc.replace("_", "")
+                dynamic_project_config = deepcopy(self.project)
+                dynamic_project_config["datasources"] = {}
+                if "source_map" in dynamic_project_config:
+                    dynamic_project_config.pop("source_map")
+                for table in common_tables:
+                    log.debug(f"Comparing table: {sc}.{table}")
+
+                    source_map_item = []
+                    for ds_name, db, typ, cpn in zip(
+                        ds_name_compressed_list,
+                        databases,
+                        dbtypes,
+                        connection_profile_names,
+                    ):
+                        table_ds_config = {
+                            "connection_profile": cpn,
+                            "schema": sc,
+                            "table": table,
+                        }
+                        if table_primary_key:
+                            table_ds_config["primary_key"] = table_primary_key
+                            table_ds_config["compare_column"] = table_primary_key
+                        if typ != "mysql":
+                            table_ds_config["database"] = db
+
+                        dyn_ds_name = f"{ds_name}_{sc_comp}_{table.replace('_', '')}"
+                        dynamic_project_config["datasources"][
+                            dyn_ds_name
+                        ] = table_ds_config
+                        log.debug(
+                            f"Datasource: {dyn_ds_name} | Config: {table_ds_config}"
+                        )
+                        source_map_item.append(dyn_ds_name)
+
+                    table_outfile_fqn = get_outfile_fqn(
+                        outdir=self.project["outdir"],
+                        ds_list=[
+                            ds.split(":")[0].replace("_", "") for ds in source_map_item
+                        ],
+                        infix="comparison",
                     )
 
-                    sc_comp = sc.replace("_", "")
-                    dynamic_project_config = deepcopy(self.project["datasources"])
-                    dynamic_project_config["datasources"] = {}
-                    if "source_map" in dynamic_project_config:
-                        dynamic_project_config.pop("source_map")
-                    for table in common_tables:
-                        log.debug(f"Comparing table: {sc}.{table}")
-
-                        source_map_item = []
-                        for ds_name, db, typ, cpn in zip(
-                            ds_name_compressed_list,
-                            databases,
-                            dbtypes,
-                            connection_profile_names,
-                        ):
-                            table_ds_config = {
-                                "connection_profile": cpn,
-                                "schema": sc,
-                                "table": table,
-                                "primary_key": table_primary_key,
-                                "compare_column": table_primary_key,
-                            }
-                            if typ != "mysql":
-                                table_ds_config["database"] = db
-
-                            dyn_ds_name = f"{ds_name}_{sc_comp}_{table.replace('_', '')}"
-                            dynamic_project_config["datasources"][
-                                dyn_ds_name
-                            ] = table_ds_config
-                            log.debug(
-                                f"Datasource: {dyn_ds_name} | Config: {table_ds_config}"
-                            )
-                            source_map_item.append(dyn_ds_name)
-
-                        table_outfile_fqn = get_outfile_fqn(
-                            outdir=self.project["outdir"],
-                            ds_list=[
-                                ds.split(":")[0].replace("_", "")
-                                for ds in source_map_item
-                            ],
-                            infix="comparison",
-                        )
-
-                        # Execute CompareTask
-                        log.debug(f"Executing CompareTask for: {source_map_item}")
-                        CompareTask(
-                            profile=self.profile,
-                            project=dynamic_project_config,
-                            runtime=self.runtime,
-                            datasources=source_map_item,
-                            outfile_fqn=table_outfile_fqn,
-                            sample_count=self.sample_count,
-                            composite=self.composite,
-                        ).execute()
+                    # Execute CompareTask
+                    log.debug(f"Executing CompareTask for: {source_map_item}")
+                    CompareTask(
+                        profile=self.profile,
+                        project=dynamic_project_config,
+                        runtime=self.runtime,
+                        datasources=source_map_item,
+                        outfile_fqn=table_outfile_fqn,
+                        sample_count=self.sample_count,
+                        composite=self.composite,
+                    ).execute()
 
         end_time = time.time()
         log.info(f"Finished task: scan{' --compare' if self.compare else ''}")

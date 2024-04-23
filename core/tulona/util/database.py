@@ -16,6 +16,6 @@ def get_tables_from_schema(engine, schema):
     return sorted(inspector.get_table_names(schema=schema))
 
 
-def get_table_primary_keys(engine, table):
-    tabmeta = Table(table, MetaData(), autoload_with=engine)
-    return tabmeta.primary_key.columns.values()
+def get_table_primary_keys(engine, schema, table):
+    tabmeta = Table(table, MetaData(), schema=schema, autoload_with=engine)
+    return [c.name for c in tabmeta.primary_key.columns.values()]
