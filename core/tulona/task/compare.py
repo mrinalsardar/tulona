@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import traceback
 from copy import deepcopy
 from dataclasses import _MISSING_TYPE, dataclass, fields
 from pathlib import Path
@@ -332,8 +333,8 @@ class CompareColumnTask(BaseTask):
                 log.debug(f"Trying unquoted column names: {columns}")
                 log.debug(f"Executing query: {query}")
                 df = get_query_output_as_df(connection_manager=conman, query_text=query)
-            except Exception as exp:
-                log.warning(f"Failed with error: {exp}")
+            except Exception:
+                log.warning(f"Failed with error: {traceback.format_exc()}")
                 log.debug(f'Trying quoted column names: "{columns}"')
                 query = get_column_query(table_fqn, columns, quoted=True)
                 log.debug(f"Executing query: {query}")
@@ -453,8 +454,8 @@ class CompareTask(BaseTask):
                 outfile_fqn=self.outfile_fqn,
                 compare=True,
             ).execute()
-        except Exception as exc:
-            log.error(f"Profiling failed with error: {exc}")
+        except Exception:
+            log.error(f"Profiling failed with error: {traceback.format_exc()}")
 
         # Row comparison
         primary_key = None
@@ -469,8 +470,8 @@ class CompareTask(BaseTask):
         try:
             primary_key = cdt.extract_confs()["primary_key"]
             cdt.execute()
-        except Exception as exc:
-            log.error(f"Row comparison failed with error: {exc}")
+        except Exception:
+            log.error(f"Row comparison failed with error: {traceback.format_exc()}")
 
         # Column comparison
         project_copy = deepcopy(self.project)
@@ -486,8 +487,8 @@ class CompareTask(BaseTask):
                 outfile_fqn=self.outfile_fqn,
                 composite=self.composite,
             ).execute()
-        except Exception as exc:
-            log.error(f"Column comparison failed with error: {exc}")
+        except Exception:
+            log.error(f"Column comparison failed with error: {traceback.format_exc()}")
 
         end_time = time.time()
         log.info("------------------------ Finished task: compare")

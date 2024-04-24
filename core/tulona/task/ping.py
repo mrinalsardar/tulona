@@ -1,5 +1,6 @@
 import logging
 import time
+import traceback
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -35,8 +36,8 @@ class PingTask(BaseTask):
                     ).fetchone()
                     _ = results[0]
                     log.info("Connection successful")
-            except Exception as exp:
-                log.error(f"Connection failed with error: {exp}")
+            except Exception:
+                log.error(f"Connection failed with error: {traceback.format_exc()}")
 
         end_time = time.time()
         log.info("Finished task: ping")

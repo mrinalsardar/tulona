@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
@@ -40,8 +41,8 @@ def create_profile(
         df_metric = get_query_output_as_df(
             connection_manager=conman, query_text=metric_query
         )
-    except Exception as exp:
-        log.warning(f"Previous query failed with error: {exp}")
+    except Exception:
+        log.warning(f"Previous query failed with error: {traceback.format_exc()}")
         log.debug("Trying query with quoted column names")
         metric_query = get_metric_query(
             table_fqn,
@@ -54,7 +55,6 @@ def create_profile(
             connection_manager=conman, query_text=metric_query
         )
 
-    log.debug("Converting metric data into presentable format")
     metric_dict = {m: [] for m in ["column_name"] + metrics}
     for col in df_meta["column_name"]:
         metric_dict["column_name"].append(col)
