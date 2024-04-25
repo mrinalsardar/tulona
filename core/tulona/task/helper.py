@@ -1,5 +1,4 @@
 import logging
-import traceback
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
@@ -41,8 +40,8 @@ def create_profile(
         df_metric = get_query_output_as_df(
             connection_manager=conman, query_text=metric_query
         )
-    except Exception:
-        log.warning(f"Previous query failed with error: {traceback.format_exc()}")
+    except Exception as exc:
+        log.warning(f"Previous query failed with error: {exc}")
         log.debug("Trying query with quoted column names")
         metric_query = get_metric_query(
             table_fqn,

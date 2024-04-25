@@ -323,36 +323,29 @@ class ScanTask(BaseTask):
                 common_tables = schema_comp[schema_comp["presence"] == "both"][
                     "table_name"
                 ].tolist()
-                log.debug(
-                    f"Number of common_tables found in schema {sc}: {len(common_tables)}"
-                )
+                log.debug(f"Number of common_tables found: {len(common_tables)}")
 
-                sc_comp = sc.replace("_", "")
                 dynamic_project_config = deepcopy(self.project)
                 dynamic_project_config["datasources"] = {}
                 if "source_map" in dynamic_project_config:
                     dynamic_project_config.pop("source_map")
                 for table in common_tables:
-                    log.debug(f"Comparing table: {sc}.{table}")
+                    log.debug(f"Comparing table: {scombo} - {table}")
 
                     source_map_item = []
-                    for ds_name, db, typ, cpn in zip(
-                        ds_name_compressed_list,
-                        databases,
-                        dbtypes,
-                        connection_profile_names,
-                    ):
+                    for cand, typ, cpn in zip(scombo, dbtypes, connection_profile_names):
                         table_ds_config = {
                             "connection_profile": cpn,
-                            "schema": sc,
+                            "schema": cand["schema"],
                             "table": table,
                         }
                         if table_primary_key:
                             table_ds_config["primary_key"] = table_primary_key
                             table_ds_config["compare_column"] = table_primary_key
                         if typ != "mysql":
-                            table_ds_config["database"] = db
+                            table_ds_config["database"] = cand["database"]
 
+                        sc_comp = cand["schema"].replace("_", "")
                         dyn_ds_name = f"{ds_name}_{sc_comp}_{table.replace('_', '')}"
                         dynamic_project_config["datasources"][
                             dyn_ds_name
@@ -382,6 +375,6 @@ class ScanTask(BaseTask):
                         composite=self.composite,
                     ).execute()
 
-        end_time = time.time()
-        log.info(f"Finished task: scan{' --compare' if self.compare else ''}")
-        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+        exec_time = time.time() - start_time
+        compare_flag = " --compare" if self.compare else ""
+        log.info(f"Finished task: scan{compare_flag} in {exec_time:.2f} seconds")

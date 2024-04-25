@@ -333,8 +333,8 @@ class CompareColumnTask(BaseTask):
                 log.debug(f"Trying unquoted column names: {columns}")
                 log.debug(f"Executing query: {query}")
                 df = get_query_output_as_df(connection_manager=conman, query_text=query)
-            except Exception:
-                log.warning(f"Failed with error: {traceback.format_exc()}")
+            except Exception as exc:
+                log.warning(f"Failed with error: {exc}")
                 log.debug(f'Trying quoted column names: "{columns}"')
                 query = get_column_query(table_fqn, columns, quoted=True)
                 log.debug(f"Executing query: {query}")
