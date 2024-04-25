@@ -49,11 +49,13 @@ class ScanTask(BaseTask):
         ds_name_compressed_list = []
         connection_profile_names = []
         primary_keys = []
+        ds_config_list = []
         for ds_name in self.datasources:
             log.info(f"Processing datasource {ds_name}")
             ds_compressed = ds_name.replace("_", "")
             ds_name_compressed_list.append(ds_compressed)
             ds_config = self.project["datasources"][ds_name]
+            ds_config_list.append(ds_config)
             scan_result[ds_name] = {}
             scan_result[ds_name]["database"] = {}
             scan_result[ds_name]["schema"] = {}
@@ -196,6 +198,10 @@ class ScanTask(BaseTask):
             ]
             dbtypes = [scan_result[k]["dbtype"] for k in scan_result]
             log.debug(f"Comparing databases: {' vs '.join(databases)}")
+            # TODO: schema name, if mentioned in the config, can be different
+            # for two data sources but still can be comparison candidate
+            # or maybe there is no need
+            # outer join will keep both rows
             db_comp = perform_comparison(
                 ds_compressed_names=databases,
                 dataframes=db_frames,
@@ -225,21 +231,61 @@ class ScanTask(BaseTask):
                 mode="a" if os.path.exists(dbcomp_outfile_fqn) else "w",
             )
 
-            # Compare schema extracts
-            common_schemas = db_comp[db_comp["presence"] == "both"][
-                "schema_name"
-            ].tolist()
-            log.debug(f"Number of common schemas found: {len(common_schemas)}")
+            # Compare schema extracts: list[list[Dict, Dict]]
+            # [
+            #     [
+            #         {"datasource": "ds1", "database": "db1", "schema": "sc1"},
+            #         {"datasource": "ds2", "database": "db2", "schema": "sc2"},
+            #     ],
+            # ]
+            schema_combinations = []
+            schemas_from_config = [c["schema"] for c in ds_config_list if "schema" in c]
+            if len(schemas_from_config) == 0:
+                common_schemas = db_comp[db_comp["presence"] == "both"][
+                    "schema_name"
+                ].tolist()
+                for sc in common_schemas:
+                    schema_combinations.append(
+                        [
+                            {"datasource": ds, "database": db, "schema": sc}
+                            for ds, db, sc in zip(
+                                ds_name_compressed_list,
+                                databases,
+                                [sc] * len(ds_name_compressed_list),
+                            )
+                        ]
+                    )
+            elif len(schemas_from_config) == len(ds_config_list):
+                schema_combinations = [
+                    [
+                        {"datasource": ds, "database": db, "schema": sc}
+                        for ds, db, sc in zip(
+                            ds_name_compressed_list, databases, schemas_from_config
+                        )
+                    ]
+                ]
+            else:
+                log.warning(
+                    "Cannot perform schema comparison if schema is specified for some candidate"
+                    " datasources but not all. If particular schemas need to be"
+                    " scanned and compared, schema must be specified for both datasources."
+                    " If schema is not specified for any of them, scan and compare"
+                    " will be performed at database level, for all the schemas."
+                )
 
-            for sc in common_schemas:
-                log.debug(f"Comparing schema: {sc}")
-                schema_fqns = [f"{db}.{sc}" for db in databases]
+            log.debug(
+                f"Number of schema combinations to compare: {len(schema_combinations)}"
+            )
+
+            for scombo in schema_combinations:
+                log.debug(f"Comparing schema: {scombo}")
+                schema_fqns = [f"{cand['database']}.{cand['schema']}" for cand in scombo]
                 schema_compressed = [
                     sf.replace(".", "").replace("_", "") for sf in schema_fqns
                 ]
                 schema_frames = [
-                    scan_result[ds_name]["schema"][f"{db}.{sc}"]
-                    for ds_name, db in zip(self.datasources, databases)
+                    scan_result[ds_name]["schema"][sf]
+                    for ds_name, sf in zip(self.datasources, schema_fqns)
                 ]
 
                 schema_comp = perform_comparison(
@@ -249,6 +295,13 @@ class ScanTask(BaseTask):
                     how="outer",
                     suffixes=schema_compressed,
                     indicator="presence",
+                )
+                schema_comp["presence"] = schema_comp["presence"].map(
+                    {
+                        "both": "both",
+                        "left_only": ds_name_compressed_list[0],
+                        "right_only": ds_name_compressed_list[1],
+                    }
                 )
 
                 # Writing schema comparison result
