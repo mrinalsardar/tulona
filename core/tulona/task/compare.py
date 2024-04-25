@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
+
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
@@ -255,7 +256,7 @@ class CompareDataTask(BaseTask):
         ]
         df_row_comp = df_row_comp[new_columns]
 
-        _ = create_dir_if_not_exist(self.project["outdir"])
+        _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         with pd.ExcelWriter(
             self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
         ) as writer:
@@ -406,7 +407,7 @@ class CompareColumnTask(BaseTask):
                 output_dataframes[c] = df_comp
 
         log.debug(f"Writing output into: {self.outfile_fqn}")
-        _ = create_dir_if_not_exist(self.project["outdir"])
+        _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         for sheet, df in output_dataframes.items():
             with pd.ExcelWriter(
                 self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"

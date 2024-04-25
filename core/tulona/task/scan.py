@@ -11,7 +11,7 @@ from tulona.task.base import BaseTask
 from tulona.task.compare import CompareTask
 from tulona.task.helper import perform_comparison
 from tulona.util.excel import dataframes_into_excel
-from tulona.util.filesystem import create_dir_if_not_exist, get_outfile_fqn
+from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.sql import get_query_output_as_df
 
@@ -33,7 +33,7 @@ class ScanTask(BaseTask):
     project: Dict
     runtime: RunConfig
     datasources: List[str]
-    outfile_fqn: Union[Path, str]
+    final_outdir: Union[Path, str]
     compare: bool = DEFAULT_VALUES["compare_scans"]
     sample_count: int = DEFAULT_VALUES["sample_count"]
     composite: bool = DEFAULT_VALUES["compare_column_composite"]
@@ -42,7 +42,7 @@ class ScanTask(BaseTask):
         log.info(f"Starting task: scan{' --compare' if self.compare else ''}")
         log.debug(f"Datasource: {self.datasources}")
         log.debug(f"Compare: {self.compare}")
-        log.debug(f"Output file: {self.outfile_fqn}")
+        log.debug(f"Full output directory: {self.final_outdir}")
         start_time = time.time()
 
         scan_result = {}
@@ -80,7 +80,7 @@ class ScanTask(BaseTask):
                 database = "def"
 
             # Create output directory
-            _ = create_dir_if_not_exist(self.project["outdir"])
+            _ = create_dir_if_not_exist(self.final_outdir)
 
             # Database scan
             log.debug(f"Performing database scan for: {database}")
@@ -117,11 +117,9 @@ class ScanTask(BaseTask):
             )
 
             if not self.compare:
-                # Writing scan result
-                dbscan_outfile_fqn = get_outfile_fqn(
-                    outdir=self.project["outdir"],
-                    ds_list=[ds_compressed],
-                    infix="scan",
+                # Writing database scan result
+                dbscan_outfile_fqn = Path(
+                    self.final_outdir, f"{database.replace('_', '')}_scan.xlsx"
                 )
                 log.debug(f"Writing db scan result into: {dbscan_outfile_fqn}")
                 dataframes_into_excel(
@@ -155,11 +153,10 @@ class ScanTask(BaseTask):
                 )
 
                 if not self.compare:
-                    # Writing scan result
-                    schemascan_outfile_fqn = get_outfile_fqn(
-                        outdir=self.project["outdir"],
-                        ds_list=[f"{ds_compressed}_{schema}"],
-                        infix="scan",
+                    # Writing schema scan result
+                    schemascan_outfile_fqn = Path(
+                        self.final_outdir,
+                        f"{database.replace('_', '')}_{schema.replace('_', '')}_scan.xlsx",
                     )
                     log.debug(
                         f"Writing schema scan result into: {schemascan_outfile_fqn}"
@@ -170,7 +167,6 @@ class ScanTask(BaseTask):
                         mode="a" if os.path.exists(schemascan_outfile_fqn) else "w",
                     )
                 scan_result[ds_name]["schema"][f"{database}.{schema}"] = schemaextract_df
-                # write_map[f"{ds_compressed}_{schema}"] = schemaextract_df
 
         if self.compare:
             log.debug("Preparing metadata comparison")
@@ -219,10 +215,9 @@ class ScanTask(BaseTask):
             )
 
             # Writing database comparison result
-            dbcomp_outfile_fqn = get_outfile_fqn(
-                outdir=self.project["outdir"],
-                ds_list=databases,
-                infix="scan",
+            dbs_compressed = [db.replace("_", "") for db in databases]
+            dbcomp_outfile_fqn = Path(
+                self.final_outdir, f"{'_vs_'.join(dbs_compressed)}_comparison.xlsx"
             )
             log.debug(f"Writing db scan comparison result into: {dbcomp_outfile_fqn}")
             dataframes_into_excel(
@@ -305,10 +300,8 @@ class ScanTask(BaseTask):
                 )
 
                 # Writing schema comparison result
-                schemacomp_outfile_fqn = get_outfile_fqn(
-                    outdir=self.project["outdir"],
-                    ds_list=schema_compressed,
-                    infix="scan",
+                schemacomp_outfile_fqn = Path(
+                    self.final_outdir, f"{'_vs_'.join(schema_compressed)}_comparison.xlsx"
                 )
                 log.debug(
                     f"Writing schema scan comparison result into: {schemacomp_outfile_fqn}"
@@ -355,12 +348,10 @@ class ScanTask(BaseTask):
                         )
                         source_map_item.append(dyn_ds_name)
 
-                    table_outfile_fqn = get_outfile_fqn(
-                        outdir=self.project["outdir"],
-                        ds_list=[
-                            ds.split(":")[0].replace("_", "") for ds in source_map_item
-                        ],
-                        infix="comparison",
+                    table_fqns = [f"{sf}_{table}" for sf in schema_compressed]
+                    table_outfile_fqn = Path(
+                        self.final_outdir,
+                        f"{'_vs_'.join(table_fqns)}_comparison.xlsx",
                     )
 
                     # Execute CompareTask

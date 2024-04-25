@@ -21,9 +21,11 @@ class PingTask(BaseTask):
         log.info("Starting task: ping")
         start_time = time.time()
 
+        log.debug(f"Data sources to ping: {self.datasources}")
+
         for ds in self.datasources:
             connection_profile = get_connection_profile(
-                self.profile, self.datasources[ds]
+                self.profile, self.project["datasources"][ds]
             )
             log.info(
                 f"Testing connection to data source: {ds}[{connection_profile['type']}]"

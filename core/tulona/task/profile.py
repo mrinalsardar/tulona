@@ -82,7 +82,7 @@ class ProfileTask(BaseTask):
             df = create_profile(database, schema, table, metrics, conman)
             df_collection.append(df)
 
-        _ = create_dir_if_not_exist(self.project["outdir"])
+        _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         if self.compare:
             log.debug("Preparing metadata comparison")
             df_merge = perform_comparison(

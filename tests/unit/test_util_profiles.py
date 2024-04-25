@@ -15,12 +15,11 @@ def test_extract_profile_name(project, datasource, expected):
 
 
 @pytest.mark.parametrize(
-    "profile,project,datasource,expected",
+    "profile,config,expected",
     [
         (
             {"profiles": {"pgdb": {"foo": "bar"}}},
-            {"datasources": {"ds1": {"connection_profile": "pgdb"}}},
-            "ds1",
+            {"connection_profile": "pgdb"},
             {"foo": "bar"},
         ),
     ],

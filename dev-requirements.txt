@@ -6,3 +6,4 @@ isort
 pytest-cov
 faker
 bump-my-version
+build

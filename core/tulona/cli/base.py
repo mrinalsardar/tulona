@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import click
 
@@ -11,7 +12,7 @@ from tulona.task.compare import CompareColumnTask, CompareDataTask, CompareTask
 from tulona.task.ping import PingTask
 from tulona.task.profile import ProfileTask
 from tulona.task.scan import ScanTask
-from tulona.util.filesystem import get_outfile_fqn
+from tulona.util.filesystem import get_final_outdir
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -116,10 +117,9 @@ def scan(ctx, **kwargs):
             )
 
     for datasource_list in source_maps:
-        outfile_fqn = get_outfile_fqn(
-            outdir=ctx.obj["project"]["outdir"],
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
             ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-            infix="profiling",
         )
 
         task = ScanTask(
@@ -127,7 +127,7 @@ def scan(ctx, **kwargs):
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],
             datasources=datasource_list,
-            outfile_fqn=outfile_fqn,
+            final_outdir=final_outdir,
             compare=kwargs["compare"],
             sample_count=kwargs["sample_count"],
             composite=kwargs["composite"],
@@ -185,11 +185,11 @@ def profile(ctx, **kwargs):
             )
 
     for datasource_list in source_maps:
-        outfile_fqn = get_outfile_fqn(
-            outdir=ctx.obj["project"]["outdir"],
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
             ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-            infix="profiling",
         )
+        outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
 
         task = ProfileTask(
             profile=ctx.obj["profile"],
@@ -242,11 +242,11 @@ def compare_data(ctx, **kwargs):
         )
 
     for datasource_list in source_maps:
-        outfile_fqn = get_outfile_fqn(
-            outdir=ctx.obj["project"]["outdir"],
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
             ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-            infix="data_comparison",
         )
+        outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
 
         task = CompareDataTask(
             profile=ctx.obj["profile"],
@@ -304,11 +304,11 @@ def compare_column(ctx, **kwargs):
         )
 
     for datasource_list in source_maps:
-        outfile_fqn = get_outfile_fqn(
-            outdir=ctx.obj["project"]["outdir"],
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
             ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-            infix="column_comparison",
         )
+        outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
 
         task = CompareColumnTask(
             profile=ctx.obj["profile"],
@@ -364,11 +364,11 @@ def compare(ctx, **kwargs):
         )
 
     for datasource_list in source_maps:
-        outfile_fqn = get_outfile_fqn(
-            outdir=ctx.obj["project"]["outdir"],
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
             ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
-            infix="comparison",
         )
+        outfile_fqn = Path(final_outdir, "comparison.xlsx")
 
         task = CompareTask(
             profile=ctx.obj["profile"],
