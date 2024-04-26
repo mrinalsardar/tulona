@@ -1,5 +1,6 @@
 import logging
 import time
+import traceback
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -20,8 +21,12 @@ class PingTask(BaseTask):
         log.info("Starting task: ping")
         start_time = time.time()
 
+        log.debug(f"Data sources to ping: {self.datasources}")
+
         for ds in self.datasources:
-            connection_profile = get_connection_profile(self.profile, self.project, ds)
+            connection_profile = get_connection_profile(
+                self.profile, self.project["datasources"][ds]
+            )
             log.info(
                 f"Testing connection to data source: {ds}[{connection_profile['type']}]"
             )
@@ -33,8 +38,8 @@ class PingTask(BaseTask):
                     ).fetchone()
                     _ = results[0]
                     log.info("Connection successful")
-            except Exception as exp:
-                log.error(f"Connection failed with error: {exp}")
+            except Exception:
+                log.error(f"Connection failed with error: {traceback.format_exc()}")
 
         end_time = time.time()
         log.info("Finished task: ping")

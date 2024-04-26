@@ -16,6 +16,10 @@ from tulona.util.profiles import extract_profile_name, get_connection_profile
 
 log = logging.getLogger(__name__)
 
+DEFAULT_VALUES = {
+    "compare_profiles": False,
+}
+
 
 @dataclass
 class ProfileTask(BaseTask):
@@ -24,7 +28,7 @@ class ProfileTask(BaseTask):
     runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
-    compare: bool = False
+    compare: bool = DEFAULT_VALUES["compare_profiles"]
 
     # Support for default values
     def __post_init__(self):
@@ -51,6 +55,13 @@ class ProfileTask(BaseTask):
             ds_name_compressed_list.append(ds_name_compressed)
 
             ds_config = self.project["datasources"][ds_name]
+
+            if "query" in ds_config:
+                raise AttributeError(
+                    "Profiling only works with tables, not with queries"
+                    f" Check your datasource config for: {ds_name}"
+                )
+
             dbtype = self.profile["profiles"][
                 extract_profile_name(self.project, ds_name)
             ]["type"]
@@ -64,9 +75,7 @@ class ProfileTask(BaseTask):
             table = ds_config["table"]
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
-            connection_profile = get_connection_profile(
-                self.profile, self.project, ds_name
-            )
+            connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             log.info(f"Profiling {ds_name}")
@@ -80,7 +89,7 @@ class ProfileTask(BaseTask):
             df = create_profile(database, schema, table, metrics, conman)
             df_collection.append(df)
 
-        _ = create_dir_if_not_exist(self.project["outdir"])
+        _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         if self.compare:
             log.debug("Preparing metadata comparison")
             df_merge = perform_comparison(

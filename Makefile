@@ -20,8 +20,8 @@ validate-merge: run-tests test-build
 # 	tulona ping --datasources employee_postgres,employee_mysql
 # 	tulona profile --datasources employee_postgres,employee_mysql
 # 	tulona profile --compare --datasources employee_postgres,employee_mysql
-# 	tulona compare-data --datasources employee_postgres,employee_mysql
-# 	tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql
+# 	tulona compare-row --datasources employee_postgres,employee_mysql
+# 	tulona compare-row --sample-count 50 --datasources employee_postgres,employee_mysql
 # 	tulona compare-column --datasources employee_postgres,employee_mysql
 # 	tulona compare --datasources employee_postgres,employee_mysql
 # 	tulona compare --sample-count 50 --datasources employee_postgres,employee_mysql

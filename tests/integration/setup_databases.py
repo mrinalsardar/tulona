@@ -13,15 +13,17 @@ logging.getLogger("faker").setLevel(logging.ERROR)
 
 
 conn_str_list = [
-    "postgresql://postgres:postgres@localhost:5432/postgres",
-    "mysql+pymysql://user:password@localhost:3306/db",
+    "postgresql://tulona:anolut@localhost:5432/postgresdb",
+    "mysql+pymysql://tulona:anolut@localhost:3306/corporate",
 ]
+
+# primary_keys = {"employee": "(Employee_ID)", "people_composite_key": "(ID_1, ID_2)"}
 
 if __name__ == "__main__":
     log.info("Loading sample data into postgres and mysql tables")
     for csvf in Path(Path(__file__).resolve().parent, "data").glob("*.csv"):
         log.debug(f"Loding file: {csvf}")
-        # schema_name = 'corporate'
+        schema_name = "corporate"
         table_name = csvf.name.split(".")[0]
         log.debug(f"Loading to table: {table_name}")
 
@@ -60,15 +62,18 @@ if __name__ == "__main__":
                 f"Loading {df.shape[0]} records into {cstr.split(':')[0]}.{table_name}"
             )
             with engine.connect() as conn:
-                # conn.execute(f"create schema if not exists {schema_name}")
-                # conn.execute(
-                #     schema.CreateSchema(
-                #         name=f"{cstr.split('/')[-1]}.{schema_name}",
-                #         if_not_exists=True
-                #     )
-                # )
+                conn.execute(f"create schema if not exists {schema_name}")
+                # conn.execute(schema.CreateSchema(name=schema_name, if_not_exists=True))
+                # engine.execute(schema.CreateSchema(name=schema_name, if_not_exists=True))
                 # if not conn.dialect.has_schema(engine, schema_name):
                 #     engine.execute(schema.CreateSchema(schema_name))
 
-                # df.to_sql(table_name, conn, schema=schema_name, if_exists='replace', index=False)
-                df.to_sql(table_name, conn, if_exists="replace", index=False)
+                df.to_sql(
+                    table_name, conn, schema=schema_name, if_exists="replace", index=False
+                )
+                # df.to_sql(table_name, conn, if_exists="replace", index=False)
+
+                # TODO: Do this manually for now
+                # conn.execute(
+                #     f"alter table {schema_name}.{table_name} add primary key {primary_keys[table_name]};"
+                # )

@@ -112,6 +112,28 @@ This is how a `tulona-project.yml` file looks like:
       compare_column:
         - ID_1
         - ID_2
+    postgresdb_postgres:
+      connection_profile: pgdb
+      database: postgresdb
+    none_mysql:
+      connection_profile: mydb
+    postgresdb_postgres_schema:
+      connection_profile: pgdb
+      database: postgresdb
+      schema: corporate_copy
+    none_mysql_schema:
+      connection_profile: mydb
+      schema: corporate
+    employee_postgres_query:
+      connection_profile: pgdb
+      query: select * from postgresdb.corporate.employee
+      primary_key: Employee_ID
+      compare_column: Employee_ID
+    employee_mysql_query:
+      connection_profile: mydb
+      query: select * from corporate.employee
+      primary_key: Employee_ID
+      compare_column: Employee_ID
 
   # List of lists
   # The inner lists have datasources that need to be used for tasks like comparison
@@ -123,6 +145,8 @@ This is how a `tulona-project.yml` file looks like:
       - employee_mysql
     - - person_postgres
       - person_mysql
+    - - employee_postgres_query
+      - employee_mysql_query
 
 
 Features
@@ -156,15 +180,19 @@ Tulona has following commands available:
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
 
-* **compare-data**: To compare sample data from two sources/tables. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
+* **compare-row**: To compare sample data from two sources/tables/queries. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
 
   * Command without `--sample-count` parameter:
 
-    ``tulona compare-data --datasources employee_postgres,employee_mysql``
+    ``tulona compare-row --datasources employee_postgres,employee_mysql``
 
   * Command with `--sample-count` parameter:
 
-    ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
+    ``tulona compare-row --sample-count 50 --datasources employee_postgres,employee_mysql``
+
+  * Compare queries instead of tables, useful when you want to compare resutls of two queries:
+
+    ``tulona compare-row --datasources employee_postgres_query,employee_mysql_query``
 
 * **compare-column**: To compare columns from tables from two sources/tables. This is expecially useful when you want see if all the rows from one table/source is present in the other one by comparing the primary/unique key. The result will be an excel file with extra primary/unique keys from both sides. If both have the same set of primary/unique keys, essentially means they have the same rows, excel file will be empty. Command samples:
 
@@ -179,6 +207,16 @@ Tulona has following commands available:
 * **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. It will prepare comparison of everything and write them into different sheets of a single excel file. Sample command:
 
   ``tulona compare --datasources employee_postgres,employee_mysql``
+
+* **scan**: To scan and compare databases or schemas in terms of metadata and tables present if you want to compare all tables and don't want to set up datasource config for all of them. Sample commands:
+
+  * Scan without comparing:
+
+    ``tulona scan --datasources postgresdb_postgres_schema,none_mysql_schema``
+
+  * Scan and compare:
+
+    ``tulona scan --compare --datasources postgresdb_postgres_schema,none_mysql_schema``
 
 
 From `tulona v0.4.0` a new project config property has been introduced: `source_map`. If this config is set, in the project config file (tulona-project.yml), then `--datasources` parameter can be skipped with commands.

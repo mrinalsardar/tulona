@@ -15,16 +15,15 @@ def test_extract_profile_name(project, datasource, expected):
 
 
 @pytest.mark.parametrize(
-    "profile,project,datasource,expected",
+    "profile,config,expected",
     [
         (
             {"profiles": {"pgdb": {"foo": "bar"}}},
-            {"datasources": {"ds1": {"connection_profile": "pgdb"}}},
-            "ds1",
+            {"connection_profile": "pgdb"},
             {"foo": "bar"},
         ),
     ],
 )
-def test_get_connection_profile(profile, project, datasource, expected):
-    actual = get_connection_profile(profile, project, datasource)
+def test_get_connection_profile(profile, config, expected):
+    actual = get_connection_profile(profile, config)
     assert actual == expected

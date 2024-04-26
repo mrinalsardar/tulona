@@ -41,8 +41,8 @@ def create_profile(
         df_metric = get_query_output_as_df(
             connection_manager=conman, query_text=metric_query
         )
-    except Exception as exp:
-        log.warning(f"Previous query failed with error: {exp}")
+    except Exception as exc:
+        log.warning(f"Previous query failed with error: {exc}")
         log.debug("Trying query with quoted column names")
         metric_query = get_metric_query(
             table_fqn,
@@ -55,7 +55,6 @@ def create_profile(
             connection_manager=conman, query_text=metric_query
         )
 
-    log.debug("Converting metric data into presentable format")
     metric_dict = {m: [] for m in ["column_name"] + metrics}
     for col in df_meta["column_name"]:
         metric_dict["column_name"].append(col)
@@ -91,12 +90,13 @@ def perform_comparison(
     for df in dataframes[1:]:
         colset = {c.lower() for c in df.columns.tolist()}
         common_columns = common_columns.intersection(colset)
+    log.debug(f"Common columns: {common_columns}")
 
     for ds_name, df in zip(ds_compressed_names, dataframes):
         df = df[list(common_columns)]
         df = df.rename(
             columns={
-                c: f"{c}_{ds_name}" if c.lower() not in primary_key else c
+                c: f"{c}-{ds_name}" if c.lower() not in primary_key else c
                 for c in df.columns
             }
         )
@@ -116,6 +116,9 @@ def perform_comparison(
             indicator=indicator,
             validate=validate,
         )
+
     df_merge = df_merge[sorted(df_merge.columns.tolist())]
+    new_columns = primary_key + [col for col in df_merge if col not in primary_key]
+    df_merge = df_merge[new_columns]
 
     return df_merge
