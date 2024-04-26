@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
-
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
 from tulona.task.helper import create_profile, perform_comparison
@@ -55,6 +54,13 @@ class ProfileTask(BaseTask):
             ds_name_compressed_list.append(ds_name_compressed)
 
             ds_config = self.project["datasources"][ds_name]
+
+            if "query" in ds_config:
+                raise AttributeError(
+                    "Profiling only works with tables, not with queries"
+                    f"Check your datasource config for: {ds_name}"
+                )
+
             dbtype = self.profile["profiles"][
                 extract_profile_name(self.project, ds_name)
             ]["type"]

@@ -64,6 +64,7 @@ class CompareRowTask(BaseTask):
         econf_dict["ds_configs"] = []
         econf_dict["dbtypes"] = []
         econf_dict["table_fqns"] = []
+        econf_dict["queries"] = []
         econf_dict["connection_managers"] = []
         econf_dict["exclude_columns_lol"] = []
         for ds_name in self.datasources:
@@ -80,32 +81,74 @@ class CompareRowTask(BaseTask):
             ]["type"]
             econf_dict["dbtypes"].append(dbtype)
 
-            # MySQL doesn't have logical database
-            if "database" in ds_config and dbtype.lower() != "mysql":
-                database = ds_config["database"]
-            else:
-                database = None
-            schema = ds_config["schema"]
-            table = ds_config["table"]
+            if "query" in ds_config and "table" in ds_config:
+                raise AttributeError(
+                    "Both 'query' and 'table' cannot be specified in datasource config"
+                )
 
-            table_fqn = get_table_fqn(
-                database,
-                schema,
-                table,
-            )
-            econf_dict["table_fqns"].append(table_fqn)
+            if "query" in ds_config:
+                econf_dict["queries"].append(ds_config["query"])
+                if "exclude_columns" in ds_config:
+                    log.warning(
+                        "Attribute 'exclude_columns' doesn't have any effect"
+                        " with attribute 'query'"
+                    )
+                    econf_dict["exclude_columns_lol"].append([])
+                if "schema" in ds_config:
+                    log.warning(
+                        "Attribute 'schema' doesn't have any effect"
+                        " with attribute 'query'"
+                    )
+                if "table_fqns" in econf_dict:
+                    if len(econf_dict["table_fqns"]) > 0:
+                        raise AttributeError(
+                            "Same attribute from 'query' and 'table' has to be"
+                            " specified in all candidate datasource confgis"
+                        )
+                    else:
+                        econf_dict.pop("table_fqns")
+
+            elif "table" in ds_config:
+                # MySQL doesn't have logical database
+                if "database" in ds_config and dbtype.lower() != "mysql":
+                    database = ds_config["database"]
+                else:
+                    database = None
+                schema = ds_config["schema"]
+                table = ds_config["table"]
+
+                table_fqn = get_table_fqn(
+                    database,
+                    schema,
+                    table,
+                )
+
+                exclude_columns = (
+                    ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
+                )
+                if isinstance(exclude_columns, str):
+                    exclude_columns = [exclude_columns]
+                econf_dict["exclude_columns_lol"].append(exclude_columns)
+
+                econf_dict["table_fqns"].append(table_fqn)
+                if "queries" in econf_dict:
+                    if len(econf_dict["queries"]) > 0:
+                        raise AttributeError(
+                            "Same attribute from 'query' and 'table' has to be"
+                            " specified in all candidate datasource confgis"
+                        )
+                    else:
+                        econf_dict.pop("queries")
+            else:
+                raise TulonaMissingPropertyError(
+                    "Either 'table' for 'query' must be specified"
+                    "in datasource config for row comparison."
+                )
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
             econf_dict["connection_managers"].append(conman)
-
-            exclude_columns = (
-                ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
-            )
-            if isinstance(exclude_columns, str):
-                exclude_columns = [exclude_columns]
-            econf_dict["exclude_columns_lol"].append(exclude_columns)
 
             if "primary_key" in ds_config:
                 ds_pk = (
@@ -113,14 +156,14 @@ class CompareRowTask(BaseTask):
                     if isinstance(ds_config["primary_key"], str)
                     else tuple(sorted(ds_config["primary_key"]))
                 )
-                log.debug(f"Provided primary key for table {table}: {ds_pk}")
+                log.debug(f"Provided primary key for datasource {ds_name}: {ds_pk}")
             else:
                 log.debug(
-                    f"Primary key not provided for {table}[{ds_name}]"
+                    f"Primary key not provided for datasource {ds_name}"
                     " Tulona will try to extract it from table metadata"
                 )
                 ds_pk = tuple(get_table_primary_keys(conman.engine, schema, table))
-                log.debug(f"Extracted primary key for table {table}[{ds_name}]: {ds_pk}")
+                log.debug(f"Extracted primary key for datasource {ds_name}: {ds_pk}")
 
             if len(ds_pk) > 0:
                 primary_keys.append(ds_pk)
@@ -162,9 +205,12 @@ class CompareRowTask(BaseTask):
         # Config extraction
         econf_dict = self.extract_confs()
         dbtype1, dbtype2 = econf_dict["dbtypes"]
-        table_fqn1, table_fqn2 = econf_dict["table_fqns"]
-        conman1, conman2 = econf_dict["connection_managers"]
+        if "table_fqns" in econf_dict:
+            table_fqn1, table_fqn2 = econf_dict["table_fqns"]
+        else:
+            query1, query2 = econf_dict["queries"]
         exclude_columns1, exclude_columns2 = econf_dict["exclude_columns_lol"]
+        conman1, conman2 = econf_dict["connection_managers"]
 
         # TODO: push column exclusion down to the database/query
         # TODO: We probably don't need to create pk tuple out of pk
@@ -173,13 +219,15 @@ class CompareRowTask(BaseTask):
         query_expr = None
 
         log.info(f"Comparing {self.datasources}")
+        num_try = 1 if "queries" in econf_dict else 5
         i = 0
-        while i < 5:
-            log.debug(f"Extraction iteration: {i + 1}/5")
+        while i < num_try:
+            log.debug(f"Extraction iteration: {i + 1}/{num_try}")
 
-            query1 = get_table_data_query(
-                dbtype1, table_fqn1, self.sample_count, query_expr
-            )
+            if "table_fqns" in econf_dict:
+                query1 = get_table_data_query(
+                    dbtype1, table_fqn1, self.sample_count, query_expr
+                )
             if self.sample_count < 51:
                 sanitized_query1 = re.sub(r"\(.*\)", "(...)", query1)
                 log.debug(f"Executing query: {sanitized_query1}")
@@ -198,13 +246,13 @@ class CompareRowTask(BaseTask):
                 df1 = apply_column_exclusion(
                     df1, primary_key, exclude_columns1, table_fqn1
                 )
-
-            query2 = get_table_data_query(
-                dbtype2,
-                table_fqn2,
-                self.sample_count,
-                query_expr=build_filter_query_expression(df1, primary_key),
-            )
+            if "table_fqns" in econf_dict:
+                query2 = get_table_data_query(
+                    dbtype2,
+                    table_fqn2,
+                    self.sample_count,
+                    query_expr=build_filter_query_expression(df1, primary_key),
+                )
             if self.sample_count < 51:
                 sanitized_query2 = re.sub(r"\(.*\)", "(...)", query2)
                 log.debug(f"Executing query: {sanitized_query2}")
@@ -304,6 +352,7 @@ class CompareColumnTask(BaseTask):
                 columns = ds_config["compare_column"]
                 columns = [columns] if isinstance(columns, str) else columns
                 compare_columns.append(columns)
+                log.debug(f"Column[s] to compare: {columns}")
             else:
                 raise TulonaMissingPropertyError(
                     "Property 'compare_column' must be specified"
@@ -320,32 +369,50 @@ class CompareColumnTask(BaseTask):
                 database = ds_config["database"]
             else:
                 database = None
-            schema = ds_config["schema"]
-            table = ds_config["table"]
-            table_fqn = get_table_fqn(database, schema, table)
-            log.debug(f"Table FQN: {table_fqn}")
+            if "schema" in ds_config:
+                schema = ds_config["schema"]
 
-            log.debug(f"Extracting data for column {columns}")
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
-            query = get_column_query(table_fqn, columns)
-            try:
-                log.debug(f"Trying unquoted column names: {columns}")
+            if "query" in ds_config and "table" in ds_config:
+                raise AttributeError(
+                    "Both 'query' and 'table' cannot be specified in datasource config"
+                )
+            if "query" in ds_config:
+                query = ds_config["query"]
                 log.debug(f"Executing query: {query}")
                 df = get_query_output_as_df(connection_manager=conman, query_text=query)
-            except Exception as exc:
-                log.warning(f"Failed with error: {exc}")
-                log.debug(f'Trying quoted column names: "{columns}"')
-                query = get_column_query(table_fqn, columns, quoted=True)
-                log.debug(f"Executing query: {query}")
-                df = get_query_output_as_df(connection_manager=conman, query_text=query)
+            elif "table" in ds_config:
+                table = ds_config["table"]
+                table_fqn = get_table_fqn(database, schema, table)
+                log.debug(f"Table FQN: {table_fqn}")
+                query = get_column_query(table_fqn, columns)
+                try:
+                    log.debug(f"Trying unquoted column names: {columns}")
+                    log.debug(f"Executing query: {query}")
+                    df = get_query_output_as_df(
+                        connection_manager=conman, query_text=query
+                    )
+                except Exception as exc:
+                    log.warning(f"Failed with error: {exc}")
+                    log.debug(f'Trying quoted column names: "{columns}"')
+                    query = get_column_query(table_fqn, columns, quoted=True)
+                    log.debug(f"Executing query: {query}")
+                    df = get_query_output_as_df(
+                        connection_manager=conman, query_text=query
+                    )
+            else:
+                raise TulonaMissingPropertyError(
+                    "Either 'table' for 'query' must be specified"
+                    "in datasource config for row comparison."
+                )
 
             if df.shape[0] == 0:
-                raise ValueError(f"Table {table_fqn} doesn't have any data")
+                raise ValueError("Query didn't result into any data")
 
-            log.debug(f"Found {df.shape[0]} records in {table_fqn}")
+            log.debug(f"Extracted {df.shape[0]} records as query result")
 
             df = df.rename(columns={c: c.lower() for c in df.columns})
             column_df_list.append(df)
