@@ -181,7 +181,8 @@ class CompareRowTask(BaseTask):
                 dbtype1, table_fqn1, self.sample_count, query_expr
             )
             if self.sample_count < 51:
-                log.debug(f"Executing query: {query1}")
+                sanitized_query1 = re.sub(r"\(.*\)", "(...)", query1)
+                log.debug(f"Executing query: {sanitized_query1}")
             df1 = get_query_output_as_df(connection_manager=conman1, query_text=query1)
             if df1.shape[0] == 0:
                 raise ValueError(f"Table {table_fqn1} doesn't have any data")
@@ -205,8 +206,8 @@ class CompareRowTask(BaseTask):
                 query_expr=build_filter_query_expression(df1, primary_key),
             )
             if self.sample_count < 51:
-                sanitized_query = re.sub(r"\(.*\)", "(...)", query2)
-                log.debug(f"Executing query: {sanitized_query}")
+                sanitized_query2 = re.sub(r"\(.*\)", "(...)", query2)
+                log.debug(f"Executing query: {sanitized_query2}")
 
             df2 = get_query_output_as_df(connection_manager=conman2, query_text=query2)
             df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
