@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import click
+
 from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project

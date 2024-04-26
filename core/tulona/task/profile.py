@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
+
 from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
 from tulona.task.helper import create_profile, perform_comparison
