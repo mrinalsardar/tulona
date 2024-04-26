@@ -94,7 +94,7 @@ class CompareRowTask(BaseTask):
                         "Attribute 'exclude_columns' doesn't have any effect"
                         " with attribute 'query'"
                     )
-                    econf_dict["exclude_columns_lol"].append([])
+                econf_dict["exclude_columns_lol"].append([])
                 if "schema" in ds_config:
                     log.warning(
                         "Attribute 'schema' doesn't have any effect"
@@ -365,14 +365,6 @@ class CompareColumnTask(BaseTask):
             ]["type"]
             log.debug(f"Database type: {dbtype}")
 
-            # MySQL doesn't have logical database
-            if "database" in ds_config and dbtype.lower() != "mysql":
-                database = ds_config["database"]
-            else:
-                database = None
-            if "schema" in ds_config:
-                schema = ds_config["schema"]
-
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
@@ -386,6 +378,14 @@ class CompareColumnTask(BaseTask):
                 log.debug(f"Executing query: {query}")
                 df = get_query_output_as_df(connection_manager=conman, query_text=query)
             elif "table" in ds_config:
+                # MySQL doesn't have logical database
+                if "database" in ds_config and dbtype.lower() != "mysql":
+                    database = ds_config["database"]
+                else:
+                    database = None
+                if "schema" in ds_config:
+                    schema = ds_config["schema"]
+
                 table = ds_config["table"]
                 table_fqn = get_table_fqn(database, schema, table)
                 log.debug(f"Table FQN: {table_fqn}")

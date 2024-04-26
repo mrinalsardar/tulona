@@ -59,7 +59,7 @@ class ProfileTask(BaseTask):
             if "query" in ds_config:
                 raise AttributeError(
                     "Profiling only works with tables, not with queries"
-                    f"Check your datasource config for: {ds_name}"
+                    f" Check your datasource config for: {ds_name}"
                 )
 
             dbtype = self.profile["profiles"][
