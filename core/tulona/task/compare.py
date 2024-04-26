@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 import traceback
 from copy import deepcopy
@@ -8,7 +9,6 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
-
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
@@ -205,7 +205,8 @@ class CompareDataTask(BaseTask):
                 query_expr=build_filter_query_expression(df1, primary_key),
             )
             if self.sample_count < 51:
-                log.debug(f"Executing query: {query2}")
+                sanitized_query = re.sub(r"\(.*\)", "(...)", query2)
+                log.debug(f"Executing query: {sanitized_query}")
 
             df2 = get_query_output_as_df(connection_manager=conman2, query_text=query2)
             df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
@@ -235,7 +236,7 @@ class CompareDataTask(BaseTask):
 
         if df2.shape[0] == 0:
             raise ValueError(
-                f"Could not find common data between {table_fqn1} and {table_fqn2}"
+                f"Could not find common rows between {table_fqn1} and {table_fqn2}"
             )
 
         log.debug(
@@ -270,9 +271,8 @@ class CompareDataTask(BaseTask):
             skip_columns=primary_key,
         )
 
-        end_time = time.time()
-        log.info("------------------------ Finished task: compare-data")
-        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+        exec_time = time.time() - start_time
+        log.info(f"Finished task: compare-row in {exec_time:.2f} seconds")
 
 
 @dataclass
@@ -416,9 +416,8 @@ class CompareColumnTask(BaseTask):
                     writer, sheet_name=f"Column Comparison-> {sheet}", index=False
                 )
 
-        end_time = time.time()
-        log.info("------------------------ Finished task: compare-column")
-        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+        exec_time = time.time() - start_time
+        log.info(f"Finished task: compare-column in {exec_time:.2f} seconds")
 
 
 @dataclass
@@ -491,8 +490,8 @@ class CompareTask(BaseTask):
         except Exception:
             log.error(f"Column comparison failed with error: {traceback.format_exc()}")
 
-        end_time = time.time()
-        log.info("------------------------ Finished task: compare")
+        exec_time = time.time() - start_time
         log.info(
-            f"Total time taken [profile, compare-data, compare-column]: {(end_time - start_time):.2f} seconds"
+            "Finished task: compare[profile, compare-data, compare-column]"
+            f" in {exec_time:.2f} seconds"
         )

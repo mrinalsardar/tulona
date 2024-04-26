@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
+from tulona.exceptions import TulonaMissingPropertyError
 from tulona.task.base import BaseTask
 from tulona.task.compare import CompareTask
 from tulona.task.helper import perform_comparison
@@ -68,16 +69,20 @@ class ScanTask(BaseTask):
             log.debug(
                 f"Connection profile: {connection_profile_name} | Database type: {dbtype}"
             )
-            scan_result[ds_name]["dbtype"] = dbtype
+            scan_result[ds_name]["dbtype"] = dbtype.lower()
 
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             # MySQL doesn't have logical database
-            if "database" in ds_config and dbtype.lower() != "mysql":
+            if "database" in ds_config:
                 database = ds_config["database"]
-            else:
+            elif dbtype.lower() == "mysql":
                 database = "def"
+            else:
+                raise TulonaMissingPropertyError(
+                    "Datasource config is missing 'database'."
+                )
 
             # Create output directory
             _ = create_dir_if_not_exist(self.final_outdir)
@@ -89,7 +94,7 @@ class ScanTask(BaseTask):
                 select
                     *
                 from
-                    information_schema.schemata
+                    {"" if dbtype == "mysql" else database + "."}information_schema.schemata
                 where
                     upper(catalog_name) = '{database.upper()}'
                     and upper(schema_name) = '{ds_config["schema"].upper()}'
@@ -99,7 +104,7 @@ class ScanTask(BaseTask):
                 select
                     *
                 from
-                    information_schema.schemata
+                    {"" if dbtype == "mysql" else database + "."}information_schema.schemata
                 where
                     upper(catalog_name) = '{database.upper()}'
                     and upper(schema_name) not in (
@@ -128,7 +133,7 @@ class ScanTask(BaseTask):
                     mode="a" if os.path.exists(dbscan_outfile_fqn) else "w",
                 )
 
-            scan_result[ds_name]["database"][database] = dbextract_df
+            scan_result[ds_name]["database"][database.lower()] = dbextract_df
 
             # Schema scan
             schema_list = dbextract_df["schema_name"].tolist()
@@ -138,7 +143,7 @@ class ScanTask(BaseTask):
                 select
                     *
                 from
-                    information_schema.tables
+                    {"" if dbtype == "mysql" else database + "."}information_schema.tables
                 where
                     upper(table_catalog) = '{database.upper()}'
                     and upper(table_schema) = '{schema.upper()}'
@@ -166,7 +171,9 @@ class ScanTask(BaseTask):
                         outfile_fqn=schemascan_outfile_fqn,
                         mode="a" if os.path.exists(schemascan_outfile_fqn) else "w",
                     )
-                scan_result[ds_name]["schema"][f"{database}.{schema}"] = schemaextract_df
+                scan_result[ds_name]["schema"][
+                    f"{database.lower()}.{schema.lower()}"
+                ] = schemaextract_df
 
         if self.compare:
             log.debug("Preparing metadata comparison")
@@ -217,7 +224,7 @@ class ScanTask(BaseTask):
             # Writing database comparison result
             dbs_compressed = [db.replace("_", "") for db in databases]
             dbcomp_outfile_fqn = Path(
-                self.final_outdir, f"{'_vs_'.join(dbs_compressed)}_comparison.xlsx"
+                self.final_outdir, f"{'_'.join(dbs_compressed)}_comparison.xlsx"
             )
             log.debug(f"Writing db scan comparison result into: {dbcomp_outfile_fqn}")
             dataframes_into_excel(
@@ -279,7 +286,7 @@ class ScanTask(BaseTask):
                     sf.replace(".", "").replace("_", "") for sf in schema_fqns
                 ]
                 schema_frames = [
-                    scan_result[ds_name]["schema"][sf]
+                    scan_result[ds_name]["schema"][sf.lower()]
                     for ds_name, sf in zip(self.datasources, schema_fqns)
                 ]
 
@@ -301,7 +308,7 @@ class ScanTask(BaseTask):
 
                 # Writing schema comparison result
                 schemacomp_outfile_fqn = Path(
-                    self.final_outdir, f"{'_vs_'.join(schema_compressed)}_comparison.xlsx"
+                    self.final_outdir, f"{'_'.join(schema_compressed)}_comparison.xlsx"
                 )
                 log.debug(
                     f"Writing schema scan comparison result into: {schemacomp_outfile_fqn}"
@@ -351,7 +358,7 @@ class ScanTask(BaseTask):
                     table_fqns = [f"{sf}_{table}" for sf in schema_compressed]
                     table_outfile_fqn = Path(
                         self.final_outdir,
-                        f"{'_vs_'.join(table_fqns)}_comparison.xlsx",
+                        f"{'_'.join(table_fqns)}_comparison.xlsx",
                     )
 
                     # Execute CompareTask
