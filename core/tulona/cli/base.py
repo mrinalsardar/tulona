@@ -2,13 +2,12 @@ import logging
 from pathlib import Path
 
 import click
-
 from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingArgumentError
-from tulona.task.compare import CompareColumnTask, CompareDataTask, CompareTask
+from tulona.task.compare import CompareColumnTask, CompareRowTask, CompareTask
 from tulona.task.ping import PingTask
 from tulona.task.profile import ProfileTask
 from tulona.task.scan import ScanTask
@@ -202,16 +201,16 @@ def profile(ctx, **kwargs):
         task.execute()
 
 
-# command: tulona compare-data
-@cli.command("compare-data")
+# command: tulona compare-row
+@cli.command("compare-row")
 @click.pass_context
 # @p.exec_engine
 @p.outdir
 @p.verbose
 @p.datasources
 @p.sample_count
-def compare_data(ctx, **kwargs):
-    """Compares two data entities"""
+def compare_row(ctx, **kwargs):
+    """Compares rows from two data entities"""
 
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
@@ -236,7 +235,7 @@ def compare_data(ctx, **kwargs):
     else:
         raise TulonaMissingArgumentError(
             "Either --datasources command line argument or source_map (tulona-project.yml)"
-            " must be provided with command: compare-data"
+            " must be provided with command: compare-row"
             " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
             " for more information on source_map"
         )
@@ -248,7 +247,7 @@ def compare_data(ctx, **kwargs):
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
 
-        task = CompareDataTask(
+        task = CompareRowTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],

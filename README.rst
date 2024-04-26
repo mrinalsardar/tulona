@@ -156,15 +156,15 @@ Tulona has following commands available:
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
 
-* **compare-data**: To compare sample data from two sources/tables. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
+* **compare-row**: To compare sample data from two sources/tables. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
 
   * Command without `--sample-count` parameter:
 
-    ``tulona compare-data --datasources employee_postgres,employee_mysql``
+    ``tulona compare-row --datasources employee_postgres,employee_mysql``
 
   * Command with `--sample-count` parameter:
 
-    ``tulona compare-data --sample-count 50 --datasources employee_postgres,employee_mysql``
+    ``tulona compare-row --sample-count 50 --datasources employee_postgres,employee_mysql``
 
 * **compare-column**: To compare columns from tables from two sources/tables. This is expecially useful when you want see if all the rows from one table/source is present in the other one by comparing the primary/unique key. The result will be an excel file with extra primary/unique keys from both sides. If both have the same set of primary/unique keys, essentially means they have the same rows, excel file will be empty. Command samples:
 

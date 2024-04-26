@@ -36,7 +36,7 @@ DEFAULT_VALUES = {
 
 
 @dataclass
-class CompareDataTask(BaseTask):
+class CompareRowTask(BaseTask):
     profile: Dict
     project: Dict
     runtime: RunConfig
@@ -153,7 +153,7 @@ class CompareDataTask(BaseTask):
         return econf_dict
 
     def execute(self):
-        log.info("------------------------ Starting task: compare-data")
+        log.info("------------------------ Starting task: compare-row")
         start_time = time.time()
 
         if len(self.datasources) != 2:
@@ -459,7 +459,7 @@ class CompareTask(BaseTask):
 
         # Row comparison
         primary_key = None
-        cdt = CompareDataTask(
+        cdt = CompareRowTask(
             profile=self.profile,
             project=self.project,
             runtime=self.runtime,
@@ -492,6 +492,6 @@ class CompareTask(BaseTask):
 
         exec_time = time.time() - start_time
         log.info(
-            "Finished task: compare[profile, compare-data, compare-column]"
+            "Finished task: compare[profile, compare-row, compare-column]"
             f" in {exec_time:.2f} seconds"
         )
