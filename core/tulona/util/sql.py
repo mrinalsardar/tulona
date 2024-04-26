@@ -24,7 +24,7 @@ def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
         query = f"select * from {table_name} limit {sample_count}"
     else:
         raise TulonaNotImplementedError(
-            f"Extracting sample rows from source type {dbtype} is not implemented."
+            f"Extracting sample rows from adapter type {dbtype} is not implemented."
         )
 
     return query
