@@ -21,7 +21,7 @@ class ProjectModel(BaseModel):
     engine: str = "pandas"
     outdir: str = "output"
     datasources: Dict
-    source_map: List[List] = list()
+    task_config: List[List] = list()
 
 
 class Project:
