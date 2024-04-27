@@ -9,7 +9,7 @@ def apply_column_exclusion(
     df: pd.DataFrame,
     primary_key: Union[List, Tuple, str],
     exclude_columns: list,
-    table: str,
+    ds_name: str,
 ) -> Union[pd.DataFrame, None]:
     for k in primary_key:
         if k in exclude_columns:
@@ -24,7 +24,7 @@ def apply_column_exclusion(
 
     if len(missing_cols) > 0:
         raise ValueError(
-            f"Columns [{missing_cols}] to be excluded are not present in {table}"
+            f"Columns [{missing_cols}] to be excluded are not present in {ds_name}"
         )
 
     df = df.drop(columns=exclude_columns)

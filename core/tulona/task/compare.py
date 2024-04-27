@@ -89,12 +89,6 @@ class CompareRowTask(BaseTask):
 
             if "query" in ds_config:
                 econf_dict["queries"].append(ds_config["query"])
-                if "exclude_columns" in ds_config:
-                    log.warning(
-                        "Attribute 'exclude_columns' doesn't have any effect"
-                        " with attribute 'query'"
-                    )
-                econf_dict["exclude_columns_lol"].append([])
                 if "schema" in ds_config:
                     log.warning(
                         "Attribute 'schema' doesn't have any effect"
@@ -124,13 +118,6 @@ class CompareRowTask(BaseTask):
                     table,
                 )
 
-                exclude_columns = (
-                    ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
-                )
-                if isinstance(exclude_columns, str):
-                    exclude_columns = [exclude_columns]
-                econf_dict["exclude_columns_lol"].append(exclude_columns)
-
                 econf_dict["table_fqns"].append(table_fqn)
                 if "queries" in econf_dict:
                     if len(econf_dict["queries"]) > 0:
@@ -145,6 +132,13 @@ class CompareRowTask(BaseTask):
                     "Either 'table' for 'query' must be specified"
                     "in datasource config for row comparison."
                 )
+
+            exclude_columns = (
+                ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
+            )
+            if isinstance(exclude_columns, str):
+                exclude_columns = [exclude_columns]
+            econf_dict["exclude_columns_lol"].append(exclude_columns)
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(self.profile, ds_config)
@@ -243,9 +237,11 @@ class CompareRowTask(BaseTask):
 
             # Exclude columns
             if len(exclude_columns1) > 0:
-                log.debug(f"Excluding columns from {table_fqn1}: {exclude_columns1}")
+                log.debug(
+                    f"Excluding columns from {econf_dict['ds_names'][0]}: {exclude_columns1}"
+                )
                 df1 = apply_column_exclusion(
-                    df1, primary_key, exclude_columns1, table_fqn1
+                    df1, primary_key, exclude_columns1, econf_dict["ds_names"][0]
                 )
             if "table_fqns" in econf_dict:
                 query2 = get_table_data_query(
@@ -267,9 +263,11 @@ class CompareRowTask(BaseTask):
 
             # Exclude columns
             if len(exclude_columns2) > 0:
-                log.debug(f"Excluding columns from {table_fqn2}: {exclude_columns2}")
+                log.debug(
+                    f"Excluding columns from {econf_dict['ds_names'][1]}: {exclude_columns2}"
+                )
                 df2 = apply_column_exclusion(
-                    df2, primary_key, exclude_columns2, table_fqn2
+                    df2, primary_key, exclude_columns2, econf_dict["ds_names"][1]
                 )
 
             if df2.shape[0] > 0:
