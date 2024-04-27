@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 from tulona.config.runtime import RunConfig
-from tulona.exceptions import TulonaMissingPropertyError
+from tulona.exceptions import TulonaMissingPropertyError, TulonaUnSupportedTaskError
 from tulona.task.base import BaseTask
 from tulona.task.compare import CompareTask
 from tulona.task.helper import perform_comparison
@@ -56,6 +56,12 @@ class ScanTask(BaseTask):
             ds_compressed = ds_name.replace("_", "")
             ds_name_compressed_list.append(ds_compressed)
             ds_config = self.project["datasources"][ds_name]
+            if "table" in ds_config or "query" in ds_config:
+                raise TulonaUnSupportedTaskError(
+                    "Scan doesn't work on table/query."
+                    " Please use one of the following tasks:"
+                    " profile, compare-row, compare-column, compare"
+                )
             ds_config_list.append(ds_config)
             scan_result[ds_name] = {}
             scan_result[ds_name]["database"] = {}

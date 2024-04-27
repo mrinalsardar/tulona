@@ -41,7 +41,7 @@ def get_result_dir(dir_dict: dict, base: Union[str, Path], key: str) -> Path:
 
 
 # TODO: Testable - pull current timestamp from caller
-def get_final_outdir(basedir: str, ds_list: List[str]):
+def get_final_outdir(basedir: str, ds_list: List[str], task: str):
     out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    final_outdir = Path(basedir, f"{'_'.join(ds_list)}_{out_timestamp}")
+    final_outdir = Path(basedir, f"{'_'.join(ds_list)}_{task}_{out_timestamp}")
     return final_outdir
