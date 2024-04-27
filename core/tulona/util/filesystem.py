@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 
 def path_exists(p: Union[str, Path]) -> bool:
