@@ -134,8 +134,7 @@ def scan(ctx, **kwargs):
         log.debug(f"Executing scan with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="scan",
+            task_conf=tconf,
         )
 
         ScanTask(
@@ -201,8 +200,7 @@ def profile(ctx, **kwargs):
         log.debug(f"Executing profile with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="profile",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
 
@@ -267,8 +265,7 @@ def compare_row(ctx, **kwargs):
         log.debug(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="comparerow",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
 
@@ -338,8 +335,7 @@ def compare_column(ctx, **kwargs):
         log.debug(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="comparecolumn",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
 
@@ -409,8 +405,7 @@ def compare(ctx, **kwargs):
         log.debug(f"Executing compare with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="compare",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
 
@@ -484,8 +479,7 @@ def run(ctx, **kwargs):
         log.debug(f"Executing profile with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="profile",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
 
@@ -506,8 +500,7 @@ def run(ctx, **kwargs):
         log.debug(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="comparerow",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
 
@@ -528,8 +521,7 @@ def run(ctx, **kwargs):
         log.debug(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="comparecolumn",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
 
@@ -550,8 +542,7 @@ def run(ctx, **kwargs):
         log.debug(f"Executing compare with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="compare",
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
 
@@ -570,8 +561,7 @@ def run(ctx, **kwargs):
         log.debug(f"Executing scan with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in tconf["datasources"]],
-            task="scan",
+            task_conf=tconf,
         )
 
         ScanTask(
