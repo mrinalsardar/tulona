@@ -3,8 +3,6 @@ from typing import Dict
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 
-from tulona.exceptions import TulonaMissingPropertyError
-
 
 def get_mssql_engine(conn_profile: Dict):
     if "connection_string" in conn_profile:
@@ -14,12 +12,15 @@ def get_mssql_engine(conn_profile: Dict):
 
     # validate properties
     if "connection_string" not in conn_profile:
-        mandaory_properties = {"driver_version", "server", "database"}
-        if len(mandaory_properties.intersection(set(conn_profile.keys()))) != len(
-            mandaory_properties
-        ):
-            raise TulonaMissingPropertyError(
-                f"One or more of {mandaory_properties} connection propertie[s] is/are missing"
-            )
+        raise NotImplementedError(
+            "Please use 'connection_string' property to connect to Microsoft SQL Server"
+        )
+        # mandaory_properties = {"driver_version", "server", "database"}
+        # if len(mandaory_properties.intersection(set(conn_profile.keys()))) != len(
+        #     mandaory_properties
+        # ):
+        #     raise TulonaMissingPropertyError(
+        #         f"One or more of {mandaory_properties} connection propertie[s] is/are missing"
+        #     )
 
     return engine
