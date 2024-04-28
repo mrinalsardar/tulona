@@ -45,6 +45,7 @@ def ping(ctx, **kwargs):
 
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
+        logging.getLogger("snowflake").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()

@@ -41,8 +41,6 @@ class ScanTask(BaseTask):
 
     def execute(self):
         log.info(f"Starting task: scan{' --compare' if self.compare else ''}")
-        log.debug(f"Datasource: {self.datasources}")
-        log.debug(f"Compare: {self.compare}")
         log.debug(f"Full output directory: {self.final_outdir}")
         start_time = time.time()
 
