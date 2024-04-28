@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 
 def path_exists(p: Union[str, Path]) -> bool:
@@ -41,7 +41,21 @@ def get_result_dir(dir_dict: dict, base: Union[str, Path], key: str) -> Path:
 
 
 # TODO: Testable - pull current timestamp from caller
-def get_final_outdir(basedir: str, ds_list: List[str]):
+def get_final_outdir(basedir: str, task_conf: str):
     out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    final_outdir = Path(basedir, f"{'_'.join(ds_list)}_{out_timestamp}")
+
+    task = task_conf["task"].replace("-", "")
+    ds_list = [ds.split(":")[0].replace("_", "") for ds in task_conf["datasources"]]
+    extra_params = []
+    for p in task_conf:
+        if p not in ["task", "datasources"]:
+            if isinstance(task_conf[p], int):
+                extra_params.extend([p.replace("_", ""), str(task_conf[p])])
+            else:
+                extra_params.append(p.replace("_", ""))
+
+    innerdir = (
+        f"{'_'.join(ds_list)}_{task}_{'_'.join(extra_params)}_{out_timestamp}".lower()
+    )
+    final_outdir = Path(basedir, innerdir)
     return final_outdir

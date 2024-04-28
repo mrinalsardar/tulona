@@ -66,3 +66,10 @@ class TulonaFundamentalError(Exception):
         self.message = message
         self.formatted_message = f"ERROR: {self.message}"
         super().__init__(self.formatted_message)
+
+
+class TulonaUnSupportedTaskError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        self.formatted_message = f"ERROR: {self.message}"
+        super().__init__(self.formatted_message)

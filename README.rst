@@ -12,6 +12,10 @@ A utility to compare tables, espacially useful to perform validations for migrat
    * - Meta
      - |License Apache-2.0| |Codestyle Black|
 
+Functionality
+-------------
+The basic functionality of `tulona` is to compare datasets, write them into Excel files and highlight the mismatches.
+
 
 Connection Profiles
 -------------------
@@ -72,43 +76,47 @@ This is how a `tulona-project.yml` file looks like:
 
   outdir: output # the folder comparison result is written into
 
+  # Datasource names must be unique
   datasources:
     employee_postgres:
       connection_profile: pgdb
-      database: postgres
-      schema: public
+      database: postgresdb
+      schema: corporate
       table: employee
-      primary_key: employee_id
-      exclude_columns:  # optional
+      primary_key: Employee_ID
+      exclude_columns:
         - name
-      compare_column: Employee_ID  # conditional optional
+      compare_column: Employee_ID
     employee_mysql:
       connection_profile: mydb
-      database: db
-      schema: db
+      schema: corporate
       table: employee
-      primary_key: employee_id
-      exclude_columns:  # optional
+      primary_key: Employee_ID
+      exclude_columns:
         - phone_number
-      compare_column: Employee_ID  # conditional optional
+      compare_column: Employee_ID
     person_postgres:
       connection_profile: pgdb
-      database: postgres
-      schema: public
+      database: postgresdb
+      schema: corporate
       table: people_composite_key
       primary_key:
         - ID_1
         - ID_2
+      # exclude_columns:
+      #   - name
       compare_column:
         - ID_1
         - ID_2
     person_mysql:
       connection_profile: mydb
-      schema: db
+      schema: corporate
       table: people_composite_key
       primary_key:
         - ID_1
         - ID_2
+      # exclude_columns:
+      #   - phone_number
       compare_column:
         - ID_1
         - ID_2
@@ -126,33 +134,116 @@ This is how a `tulona-project.yml` file looks like:
       schema: corporate
     employee_postgres_query:
       connection_profile: pgdb
+      database: postgresdb
+      schema: corporate
       query: select * from postgresdb.corporate.employee
       primary_key: Employee_ID
+      exclude_columns:
+        - name
       compare_column: Employee_ID
     employee_mysql_query:
       connection_profile: mydb
+      schema: corporate
       query: select * from corporate.employee
       primary_key: Employee_ID
+      exclude_columns:
+        - phone_number
       compare_column: Employee_ID
 
-  # List of lists
-  # The inner lists have datasources that need to be used for tasks like comparison
-  # For example employee_postgres vs employee_mysql. So a [employee_postgres, employee_mysql]
-  # Outer list is a list of those combinations.
-  # So like: [[employee_postgres, employee_mysql], [datasource3, datasource4]]
-  source_map:
-    - - employee_postgres
-      - employee_mysql
-    - - person_postgres
-      - person_mysql
-    - - employee_postgres_query
-      - employee_mysql_query
+  # List of task configs(Dict)
+  # Depending on the accepted params, task config can have different params
+  # The value for that `task` key is the name of the command you want to run
+  task_config:
+    - task: ping
+      datasources:
+        - person_postgres
+        - none_mysql
+        - employee_mysql_query
+
+    - task: profile
+      datasources:
+        - employee_postgres
+        - employee_mysql
+
+    - task: profile
+      datasources:
+        - person_postgres
+        - person_mysql
+      compare: true
+
+    - task: compare-row
+      datasources:
+        - employee_postgres
+        - employee_mysql
+      sample_count: 30
+
+    - task: compare-row
+      datasources:
+        - employee_postgres
+        - employee_mysql
+
+    - task: compare-row
+      datasources:
+        - employee_postgres_query
+        - employee_mysql_query
+
+    - task: compare-column
+      datasources:
+        - employee_postgres
+        - employee_mysql
+
+    - task: compare-column
+      datasources:
+        - person_postgres
+        - person_mysql
+      composite: false # If it's false, specifying it is optional
+
+    - task: compare-column
+      datasources:
+        - person_postgres
+        - person_mysql
+      composite: true
+
+    - task: compare
+      datasources:
+        - employee_postgres
+        - employee_mysql
+      composite: true
+
+    - task: compare
+      datasources:
+        - person_postgres
+        - person_mysql
+      composite: true
+      sample_count: 30
+
+    - task: scan
+      datasources:
+        - postgresdb_postgres_schema
+
+    - task: scan
+      datasources:
+        - postgresdb_postgres
+        - none_mysql
+      compare: false
+
+    - task: scan
+      datasources:
+        - postgresdb_postgres_schema
+        - none_mysql_schema
+      compare: true
+
+    - task: scan
+      datasources:
+        - postgresdb_postgres
+        - none_mysql
+      compare: true
 
 
 Features
 --------
 Executing `tulona` or `tulona -h` or `tulona --help` returns available commands.
-All commands take one mandatory parameter, `--datasources`, a comma separated list of names of datasources from project config file (`tulona-project.yml`).
+If you don't setup `task_config`, all commands take one mandatory parameter, `--datasources`, a comma separated list of names of datasources from project config file (`tulona-project.yml`).
 
 Tulona has following commands available:
 
@@ -180,6 +271,10 @@ Tulona has following commands available:
 
     ``tulona profile --compare --datasources employee_postgres,employee_mysql``
 
+  * Sample output will be something like this:
+
+    |profile|
+
 * **compare-row**: To compare sample data from two sources/tables/queries. It will create a comparative view of all common columns from both sources/tables side by side (like: id_ds1 <-> id_ds2) and highlight mismatched values in the output excel file. By default it compares 20 common rows from both tables (subject to availabillity) but the number can be overridden with the command line argument `--sample-count`. Command samples:
 
   * Command without `--sample-count` parameter:
@@ -194,6 +289,10 @@ Tulona has following commands available:
 
     ``tulona compare-row --datasources employee_postgres_query,employee_mysql_query``
 
+  * Sample output will be something like this:
+
+    |compare_row|
+
 * **compare-column**: To compare columns from tables from two sources/tables. This is expecially useful when you want see if all the rows from one table/source is present in the other one by comparing the primary/unique key. The result will be an excel file with extra primary/unique keys from both sides. If both have the same set of primary/unique keys, essentially means they have the same rows, excel file will be empty. Command samples:
 
   * Column[s] to compare is[are] specified in `tulona-project.yml` file as part of datasource configs, with `compare_column` property. Sample command:
@@ -203,6 +302,10 @@ Tulona has following commands available:
   * Compare multiples columns as composite key (combination of column values will be compared) with additional `--composite` flag:
 
     ``tulona compare-column --composite --datasources employee_postgres,employee_mysql``
+
+  * Sample output will be something like this:
+
+    |compare_column|
 
 * **compare**: To prepare a comparison report for evrything together. To executed this command just swap the command from any of the above commands with `compare`. It will prepare comparison of everything and write them into different sheets of a single excel file. Sample command:
 
@@ -218,9 +321,12 @@ Tulona has following commands available:
 
     ``tulona scan --compare --datasources postgresdb_postgres_schema,none_mysql_schema``
 
+* **run**: To execute all the tasks defined in the `task_config` section. Sample command:
 
-From `tulona v0.4.0` a new project config property has been introduced: `source_map`. If this config is set, in the project config file (tulona-project.yml), then `--datasources` parameter can be skipped with commands.
-For example this command:
+    ``tulona run``
+
+If you setup `task_config`, there is no need to pass the `--datasources` parameter.
+In that case the following command (to compare some datasoruces):
 
 ``tulona compare --datasources employee_postgres,employee_mysql``
 
@@ -228,7 +334,11 @@ will become this:
 
 ``tulona compare``
 
-Please look at the sample project config from above to understand how to use `source_map` property.
+and it will run all the `compare` tasks defined in the `task_config` section. From our example project config file above, it will run 2 `compare` tasks.
+
+Also setting up `task_config` can be greatly benificial as you can set up different instance of same/different tasks with different config to execute in one go with the `run` command.
+
+Please look at the sample project config from above to understand how to set up `task_config` property.
 
 For debug level log, add `-v` or `--verbose` flag along with any command. For example:
 
@@ -249,6 +359,14 @@ Build wheel executable
 Install wheel executable file
 -----------------------------
 * Execute `pip install <wheel-file.whl>`
+
+
+.. |profile| image:: images/profile.png
+  :alt: Profile output
+.. |compare_row| image:: images/compare_row.png
+  :alt: Row comparison output
+.. |compare_column| image:: images/compare_column.png
+  :alt: Column comparison output
 
 
 .. |CI Test| image:: https://github.com/mrinalsardar/tulona/actions/workflows/test.yaml/badge.svg

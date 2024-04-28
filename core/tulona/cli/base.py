@@ -1,4 +1,5 @@
 import logging
+import traceback
 from pathlib import Path
 
 import click
@@ -7,7 +8,7 @@ from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project
 from tulona.config.runtime import RunConfig
-from tulona.exceptions import TulonaMissingArgumentError
+from tulona.exceptions import TulonaMissingPropertyError
 from tulona.task.compare import CompareColumnTask, CompareRowTask, CompareTask
 from tulona.task.ping import PingTask
 from tulona.task.profile import ProfileTask
@@ -44,6 +45,7 @@ def ping(ctx, **kwargs):
 
     if kwargs["verbose"]:
         logging.getLogger("tulona").setLevel(logging.DEBUG)
+        logging.getLogger("snowflake").setLevel(logging.DEBUG)
 
     prof = Profile()
     proj = Project()
@@ -52,17 +54,30 @@ def ping(ctx, **kwargs):
     ctx.obj["project"] = proj.load_project_config()
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
 
+    ping_tasks = []
     if kwargs["datasources"]:
-        datasource_list = kwargs["datasources"].split(",")
+        task_config = {
+            "task": "compare",
+            "datasources": kwargs["datasources"].split(","),
+        }
+        ping_tasks.append(task_config)
     else:
-        datasource_list = list(ctx.obj["project"]["datasources"].keys())
+        ping_tasks = [t for t in ctx.obj["project"]["task_config"] if t["task"] == "ping"]
 
-    task = PingTask(
-        profile=ctx.obj["profile"],
-        project=ctx.obj["project"],
-        datasources=datasource_list,
-    )
-    task.execute()
+    if len(ping_tasks) == 0:
+        raise RuntimeError(
+            "Nothing to execute. Either define tasks in task_config section of the"
+            " project config file or pass --datasources argument with values."
+        )
+    log.debug(f"Number of ping tasks to execute: {len(ping_tasks)}")
+
+    for tconf in ping_tasks:
+        log.debug(f"Executing ping with task profile: {tconf}")
+        PingTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            datasources=tconf["datasources"],
+        ).execute()
 
 
 # command: tulona scan
@@ -93,46 +108,46 @@ def scan(ctx, **kwargs):
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
 
-    source_maps = []
-    if kwargs["compare"]:
-        if kwargs["datasources"]:
-            source_maps.append(kwargs["datasources"].split(","))
-        elif "source_map" in ctx.obj["project"]:
-            source_maps = ctx.obj["project"]["source_map"]
-        else:
-            raise TulonaMissingArgumentError(
-                "Either --datasources command line argument or source_map (tulona-project.yml)"
-                " must be provided for comparison with command: scan"
-                " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
-                " for more information on source_map"
-            )
+    scan_tasks = []
+    if kwargs["datasources"]:
+        task_config = {
+            "task": "compare",
+            "datasources": kwargs["datasources"].split(","),
+        }
+        if kwargs["compare"]:
+            task_config["compare"] = kwargs["compare"]
+        if kwargs["sample_count"]:
+            task_config["sample_count"] = kwargs["sample_count"]
+        if kwargs["composite"]:
+            task_config["composite"] = kwargs["composite"]
+        scan_tasks.append(task_config)
     else:
-        if kwargs["datasources"]:
-            source_maps.append(kwargs["datasources"].split(","))
-        else:
-            raise TulonaMissingArgumentError(
-                "--datasources command line argument must be provided with command: scan"
-                " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file"
-                " for more information"
-            )
+        scan_tasks = [t for t in ctx.obj["project"]["task_config"] if t["task"] == "scan"]
 
-    for datasource_list in source_maps:
+    if len(scan_tasks) == 0:
+        raise RuntimeError(
+            "Nothing to execute. Either define tasks in task_config section of the"
+            " project config file or pass --datasources argument with values."
+        )
+    log.debug(f"Number of scan tasks to execute: {len(scan_tasks)}")
+
+    for tconf in scan_tasks:
+        log.debug(f"Executing scan with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            task_conf=tconf,
         )
 
-        task = ScanTask(
+        ScanTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],
-            datasources=datasource_list,
+            datasources=tconf["datasources"],
             final_outdir=final_outdir,
-            compare=kwargs["compare"],
-            sample_count=kwargs["sample_count"],
-            composite=kwargs["composite"],
-        )
-        task.execute()
+            compare=tconf["compare"] if "compare" in tconf else None,
+            sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+            composite=tconf["composite"] if "composite" in tconf else None,
+        ).execute()
 
 
 # command: tulona profile
@@ -161,45 +176,43 @@ def profile(ctx, **kwargs):
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
 
-    source_maps = []
-    if kwargs["compare"]:
-        if kwargs["datasources"]:
-            source_maps.append(kwargs["datasources"].split(","))
-        elif "source_map" in ctx.obj["project"]:
-            source_maps = ctx.obj["project"]["source_map"]
-        else:
-            raise TulonaMissingArgumentError(
-                "Either --datasources command line argument or source_map (tulona-project.yml)"
-                " must be provided for comparison with command: profile"
-                " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
-                " for more information on source_map"
-            )
+    profile_tasks = []
+    if kwargs["datasources"]:
+        task_config = {
+            "task": "compare",
+            "datasources": kwargs["datasources"].split(","),
+        }
+        if kwargs["compare"]:
+            task_config["compare"] = kwargs["compare"]
+        profile_tasks.append(task_config)
     else:
-        if kwargs["datasources"]:
-            source_maps.append(kwargs["datasources"].split(","))
-        else:
-            raise TulonaMissingArgumentError(
-                "--datasources command line argument must be provided with command: profile"
-                " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file"
-                " for more information"
-            )
+        profile_tasks = [
+            t for t in ctx.obj["project"]["task_config"] if t["task"] == "profile"
+        ]
 
-    for datasource_list in source_maps:
+    if len(profile_tasks) == 0:
+        raise RuntimeError(
+            "Nothing to execute. Either define tasks in task_config section of the"
+            " project config file or pass --datasources argument with values."
+        )
+    log.debug(f"Number of profile tasks to execute: {len(profile_tasks)}")
+
+    for tconf in profile_tasks:
+        log.debug(f"Executing profile with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
 
-        task = ProfileTask(
+        ProfileTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],
-            datasources=datasource_list,
+            datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
-            compare=kwargs["compare"],
-        )
-        task.execute()
+            compare=tconf["compare"] if "compare" in tconf else None,
+        ).execute()
 
 
 # command: tulona compare-row
@@ -228,35 +241,43 @@ def compare_row(ctx, **kwargs):
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
 
-    source_maps = []
+    compare_row_tasks = []
     if kwargs["datasources"]:
-        source_maps.append(kwargs["datasources"].split(","))
-    elif "source_map" in ctx.obj["project"]:
-        source_maps = ctx.obj["project"]["source_map"]
+        task_config = {
+            "task": "compare",
+            "datasources": kwargs["datasources"].split(","),
+        }
+        if kwargs["sample_count"]:
+            task_config["sample_count"] = kwargs["sample_count"]
+        compare_row_tasks.append(task_config)
     else:
-        raise TulonaMissingArgumentError(
-            "Either --datasources command line argument or source_map (tulona-project.yml)"
-            " must be provided with command: compare-row"
-            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
-            " for more information on source_map"
-        )
+        compare_row_tasks = [
+            t for t in ctx.obj["project"]["task_config"] if t["task"] == "compare-row"
+        ]
 
-    for datasource_list in source_maps:
+    if len(compare_row_tasks) == 0:
+        raise RuntimeError(
+            "Nothing to execute. Either define tasks in task_config section of the"
+            " project config file or pass --datasources argument with values."
+        )
+    log.debug(f"Number compare-row tasks to execute: {len(compare_row_tasks)}")
+
+    for tconf in compare_row_tasks:
+        log.debug(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
 
-        task = CompareRowTask(
+        CompareRowTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],
-            datasources=datasource_list,
+            datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
-            sample_count=kwargs["sample_count"],
-        )
-        task.execute()
+            sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+        ).execute()
 
 
 # command: tulona compare-column
@@ -290,35 +311,43 @@ def compare_column(ctx, **kwargs):
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
 
-    source_maps = []
+    compare_column_tasks = []
     if kwargs["datasources"]:
-        source_maps.append(kwargs["datasources"].split(","))
-    elif "source_map" in ctx.obj["project"]:
-        source_maps = ctx.obj["project"]["source_map"]
+        task_config = {
+            "task": "compare-column",
+            "datasources": kwargs["datasources"].split(","),
+        }
+        if kwargs["composite"]:
+            task_config["composite"] = kwargs["composite"]
+        compare_column_tasks.append(task_config)
     else:
-        raise TulonaMissingArgumentError(
-            "Either --datasources command line argument or source_map (tulona-project.yml)"
-            " must be provided with command: compare-column"
-            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
-            " for more information on source_map"
-        )
+        compare_column_tasks = [
+            t for t in ctx.obj["project"]["task_config"] if t["task"] == "compare-column"
+        ]
 
-    for datasource_list in source_maps:
+    if len(compare_column_tasks) == 0:
+        raise RuntimeError(
+            "Nothing to execute. Either define tasks in task_config section of the"
+            " project config file or pass --datasources argument with values."
+        )
+    log.debug(f"Number compare-column tasks to execute: {len(compare_column_tasks)}")
+
+    for tconf in compare_column_tasks:
+        log.debug(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
 
-        task = CompareColumnTask(
+        CompareColumnTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],
-            datasources=datasource_list,
+            datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
-            composite=kwargs["composite"],
-        )
-        task.execute()
+            composite=tconf["composite"] if "composite" in tconf else None,
+        ).execute()
 
 
 # command: tulona compare
@@ -350,36 +379,202 @@ def compare(ctx, **kwargs):
     if kwargs["outdir"]:
         ctx.obj["project"]["outdir"] = kwargs["outdir"]
 
-    source_maps = []
+    compare_tasks = []
     if kwargs["datasources"]:
-        source_maps.append(kwargs["datasources"].split(","))
-    elif "source_map" in ctx.obj["project"]:
-        source_maps = ctx.obj["project"]["source_map"]
+        task_config = {
+            "task": "compare",
+            "datasources": kwargs["datasources"].split(","),
+        }
+        if kwargs["sample_count"]:
+            task_config["sample_count"] = kwargs["sample_count"]
+        if kwargs["composite"]:
+            task_config["composite"] = kwargs["composite"]
+        compare_tasks.append(task_config)
     else:
-        raise TulonaMissingArgumentError(
-            "Either --datasources command line argument or source_map (tulona-project.yml)"
-            " must be provided with command: compare"
-            " Check https://github.com/mrinalsardar/tulona/tree/main?tab=readme-ov-file#project-config-file"
-            " for more information on source_map"
-        )
+        compare_tasks = [
+            t for t in ctx.obj["project"]["task_config"] if t["task"] == "compare"
+        ]
 
-    for datasource_list in source_maps:
+    if len(compare_tasks) == 0:
+        raise RuntimeError(
+            "Nothing to execute. Either define tasks in task_config section of the"
+            " project config file or pass --datasources argument with values."
+        )
+    log.debug(f"Number compare tasks to execute: {len(compare_tasks)}")
+
+    for tconf in compare_tasks:
+        log.debug(f"Executing compare with task profile: {tconf}")
         final_outdir = get_final_outdir(
             basedir=ctx.obj["project"]["outdir"],
-            ds_list=[ds.split(":")[0].replace("_", "") for ds in datasource_list],
+            task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
 
-        task = CompareTask(
+        CompareTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
             runtime=ctx.obj["runtime"],
-            datasources=datasource_list,
+            datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
-            sample_count=kwargs["sample_count"],
-            composite=kwargs["composite"],
+            sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+            composite=tconf["composite"] if "composite" in tconf else None,
+        ).execute()
+
+
+# command: tulona run
+@cli.command("run")
+@click.pass_context
+# @p.exec_engine
+@p.outdir
+@p.verbose
+def run(ctx, **kwargs):
+    """Run all tasks defined by `task_config` attribute in the project config file"""
+
+    if kwargs["verbose"]:
+        logging.getLogger("tulona").setLevel(logging.DEBUG)
+
+    prof = Profile()
+    proj = Project()
+
+    ctx.obj = ctx.obj or {}
+    ctx.obj["project"] = proj.load_project_config()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
+
+    if "task_config" not in ctx.obj["project"]:
+        raise TulonaMissingPropertyError(
+            "Attribute `task_config` is not defined in project config"
         )
-        task.execute()
+
+    # Override config outdir if provided in command line
+    if kwargs["outdir"]:
+        ctx.obj["project"]["outdir"] = kwargs["outdir"]
+
+    # Extract tasks
+    ping_tasks = [t for t in ctx.obj["project"]["task_config"] if t["task"] == "ping"]
+    profile_tasks = [
+        t for t in ctx.obj["project"]["task_config"] if t["task"] == "profile"
+    ]
+    compare_row_tasks = [
+        t for t in ctx.obj["project"]["task_config"] if t["task"] == "compare-row"
+    ]
+    compare_column_tasks = [
+        t for t in ctx.obj["project"]["task_config"] if t["task"] == "compare-column"
+    ]
+    compare_tasks = [
+        t for t in ctx.obj["project"]["task_config"] if t["task"] == "compare"
+    ]
+    scan_tasks = [t for t in ctx.obj["project"]["task_config"] if t["task"] == "scan"]
+
+    # PingTask
+    for tconf in ping_tasks:
+        log.debug(f"Executing ping with task profile: {tconf}")
+        PingTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            datasources=tconf["datasources"],
+        ).execute()
+
+    # ProfileTask
+    for tconf in profile_tasks:
+        log.debug(f"Executing profile with task profile: {tconf}")
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
+            task_conf=tconf,
+        )
+        outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
+
+        try:
+            ProfileTask(
+                profile=ctx.obj["profile"],
+                project=ctx.obj["project"],
+                runtime=ctx.obj["runtime"],
+                datasources=tconf["datasources"],
+                outfile_fqn=outfile_fqn,
+                compare=tconf["compare"] if "compare" in tconf else None,
+            ).execute()
+        except Exception:
+            log.error(f"Profiling failed with error: {traceback.format_exc()}")
+
+    # CompareRowTask
+    for tconf in compare_row_tasks:
+        log.debug(f"Executing compare-row with task profile: {tconf}")
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
+            task_conf=tconf,
+        )
+        outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
+
+        try:
+            CompareRowTask(
+                profile=ctx.obj["profile"],
+                project=ctx.obj["project"],
+                runtime=ctx.obj["runtime"],
+                datasources=tconf["datasources"],
+                outfile_fqn=outfile_fqn,
+                sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+            ).execute()
+        except Exception:
+            log.error(f"Row comparison failed with error: {traceback.format_exc()}")
+
+    # CompareColumnTask
+    for tconf in compare_column_tasks:
+        log.debug(f"Executing compare-column with task profile: {tconf}")
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
+            task_conf=tconf,
+        )
+        outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
+
+        try:
+            CompareColumnTask(
+                profile=ctx.obj["profile"],
+                project=ctx.obj["project"],
+                runtime=ctx.obj["runtime"],
+                datasources=tconf["datasources"],
+                outfile_fqn=outfile_fqn,
+                composite=tconf["composite"] if "composite" in tconf else None,
+            ).execute()
+        except Exception:
+            log.error(f"Column comparison failed with errorr: {traceback.format_exc()}")
+
+    # CompareTask
+    for tconf in compare_tasks:
+        log.debug(f"Executing compare with task profile: {tconf}")
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
+            task_conf=tconf,
+        )
+        outfile_fqn = Path(final_outdir, "comparison.xlsx")
+
+        CompareTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            runtime=ctx.obj["runtime"],
+            datasources=tconf["datasources"],
+            outfile_fqn=outfile_fqn,
+            sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+            composite=tconf["composite"] if "composite" in tconf else None,
+        ).execute()
+
+    # ScanTask
+    for tconf in scan_tasks:
+        log.debug(f"Executing scan with task profile: {tconf}")
+        final_outdir = get_final_outdir(
+            basedir=ctx.obj["project"]["outdir"],
+            task_conf=tconf,
+        )
+
+        ScanTask(
+            profile=ctx.obj["profile"],
+            project=ctx.obj["project"],
+            runtime=ctx.obj["runtime"],
+            datasources=tconf["datasources"],
+            final_outdir=final_outdir,
+            compare=tconf["compare"] if "compare" in tconf else None,
+            sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+            composite=tconf["composite"] if "composite" in tconf else None,
+        ).execute()
 
 
 if __name__ == "__main__":
