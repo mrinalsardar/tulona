@@ -240,8 +240,6 @@ This is how a `tulona-project.yml` file looks like:
       compare: true
 
 
-
-
 Features
 --------
 Executing `tulona` or `tulona -h` or `tulona --help` returns available commands.
