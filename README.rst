@@ -364,13 +364,10 @@ Install wheel executable file
 
 
 .. |profile| image:: images/profile.png
-  :width: 400
   :alt: Profile output
 .. |compare_row| image:: images/compare_row.png
-  :width: 400
   :alt: Row comparison output
 .. |compare_column| image:: images/compare_column.png
-  :width: 400
   :alt: Column comparison output
 
 
