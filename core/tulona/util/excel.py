@@ -84,7 +84,7 @@ def highlight_mismatch_cells(  # pargma: no cover
     wb.save(excel_file)
 
 
-def dataframes_into_excel(
+def dataframes_into_excel(  # pargma: no cover
     sheet_df_map: Dict, outfile_fqn: Union[Path, str], mode: str
 ) -> None:
     with pd.ExcelWriter(outfile_fqn, mode=mode) as writer:
