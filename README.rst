@@ -347,6 +347,25 @@ For debug level log, add `-v` or `--verbose` flag along with any command. For ex
 To know more about any specific command, execute `tulona <command> -h`.
 
 
+Supported Data platforms
+------------------------
+
+.. list-table::
+   :widths: 50 200
+   :header-rows: 1
+
+   * - Platform
+     - Adapter Name
+   * - Postgres
+     - postgres
+   * - MySQL
+     - mysql
+   * - Snowflake
+     - snowflake
+   * - Microsoft SQL Server
+     - mssql
+
+
 Development Environment Setup
 -----------------------------
 * For live installation execute `pip install -e .` and `pip install -r dev-requirements.txt`.
