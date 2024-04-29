@@ -375,7 +375,7 @@ Build Wheel Executable
 ----------------------
 * Execute `python -m build`.
 
-Install Wheel Executable file
+Install Wheel Executable File
 -----------------------------
 * Execute `pip install <wheel-file.whl>`
 
