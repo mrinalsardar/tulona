@@ -347,7 +347,7 @@ For debug level log, add `-v` or `--verbose` flag along with any command. For ex
 To know more about any specific command, execute `tulona <command> -h`.
 
 
-Supported Data platforms
+Supported Data Platforms
 ------------------------
 
 .. list-table::
@@ -371,11 +371,11 @@ Development Environment Setup
 * For live installation execute `pip install -e .` and `pip install -r dev-requirements.txt`.
 
 
-Build wheel executable
+Build Wheel Executable
 ----------------------
 * Execute `python -m build`.
 
-Install wheel executable file
+Install Wheel Executable file
 -----------------------------
 * Execute `pip install <wheel-file.whl>`
 
