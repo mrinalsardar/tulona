@@ -105,8 +105,8 @@ def perform_comparison(
                 df[k] = df[k].str.lower()
         dataframes_final.append(df)
 
-    df_merge = dataframes_final.pop()
-    for df in dataframes_final:
+    df_merge = dataframes_final[0]
+    for df in dataframes_final[1:]:
         df_merge = pd.merge(
             left=df_merge,
             right=df,

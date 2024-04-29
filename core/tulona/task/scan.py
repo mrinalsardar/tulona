@@ -331,8 +331,8 @@ class ScanTask(BaseTask):
 
                 dynamic_project_config = deepcopy(self.project)
                 dynamic_project_config["datasources"] = {}
-                if "source_map" in dynamic_project_config:
-                    dynamic_project_config.pop("source_map")
+                if "task_config" in dynamic_project_config:
+                    dynamic_project_config.pop("task_config")
                 for table in common_tables:
                     log.debug(f"Comparing table: {scombo} - {table}")
 
@@ -350,7 +350,9 @@ class ScanTask(BaseTask):
                             table_ds_config["database"] = cand["database"]
 
                         sc_comp = cand["schema"].replace("_", "")
-                        dyn_ds_name = f"{ds_name}_{sc_comp}_{table.replace('_', '')}"
+                        dyn_ds_name = (
+                            f"{cand['datasource']}_{sc_comp}_{table.replace('_', '')}"
+                        )
                         dynamic_project_config["datasources"][
                             dyn_ds_name
                         ] = table_ds_config
