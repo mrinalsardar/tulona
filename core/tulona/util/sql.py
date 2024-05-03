@@ -173,7 +173,27 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
     return query
 
 
-def get_table_data_query(dbtype, table_fqn, sample_count, query_expr: str = None):
+def get_select_expr(dbtype: str, exclude_columns) -> str:
+    dbtype = dbtype.lower()
+    if dbtype == "snowflake":
+        select_expr = f"select * exclude({', '.join(exclude_columns)})"
+    if dbtype == "mssql":
+        pass
+    if dbtype == "postgres":
+        pass
+    if dbtype == "mysql":
+        pass
+
+    return select_expr
+
+
+def get_table_data_query(
+    dbtype,
+    table_fqn,
+    sample_count,
+    exclude_columns: list = [],
+    query_expr: str = None,
+):
     if query_expr:
         query = f"select * from {table_fqn} where {query_expr}"
     else:

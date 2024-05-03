@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 
+from sqlalchemy.orm import sessionmaker
 from tulona.adapter.base.connection import BaseConnectionManager
 from tulona.adapter.mssql import get_mssql_engine
 from tulona.adapter.mysql import get_mysql_engine
@@ -34,3 +35,9 @@ class ConnectionManager(BaseConnectionManager):
 
     def close(self):
         self.conn.close()
+
+    @property
+    def session(self):
+        self.get_engine()
+        Session = sessionmaker(bind=self.engine)
+        return Session()

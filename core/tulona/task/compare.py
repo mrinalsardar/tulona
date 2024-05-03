@@ -9,13 +9,16 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
-
 from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
 from tulona.task.helper import perform_comparison
 from tulona.task.profile import ProfileTask
-from tulona.util.database import get_table_primary_keys
+from tulona.util.database import (
+    build_query,
+    get_table_primary_keys,
+    get_table_reflection,
+)
 from tulona.util.dataframe import apply_column_exclusion
 from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
@@ -65,9 +68,10 @@ class CompareRowTask(BaseTask):
         econf_dict["ds_configs"] = []
         econf_dict["dbtypes"] = []
         econf_dict["table_fqns"] = []
+        econf_dict["table_meta"] = []
         econf_dict["queries"] = []
         econf_dict["connection_managers"] = []
-        econf_dict["exclude_columns_lol"] = []
+        econf_dict["select_expr"] = []
         for ds_name in self.datasources:
             log.debug(f"Extracting configs for: {ds_name}")
             # Extract data source name from datasource:column combination
@@ -81,6 +85,11 @@ class CompareRowTask(BaseTask):
                 extract_profile_name(self.project, ds_name)
             ]["type"]
             econf_dict["dbtypes"].append(dbtype)
+
+            log.debug(f"Setting up connection to the database of: {ds_name}")
+            connection_profile = get_connection_profile(self.profile, ds_config)
+            conman = self.get_connection_manager(conn_profile=connection_profile)
+            econf_dict["connection_managers"].append(conman)
 
             if "query" in ds_config and "table" in ds_config:
                 raise AttributeError(
@@ -97,7 +106,7 @@ class CompareRowTask(BaseTask):
                 if "table_fqns" in econf_dict:
                     if len(econf_dict["table_fqns"]) > 0:
                         raise AttributeError(
-                            "Same attribute from 'query' and 'table' has to be"
+                            "Same attribute, either query or table has to be"
                             " specified in all candidate datasource confgis"
                         )
                     else:
@@ -112,17 +121,28 @@ class CompareRowTask(BaseTask):
                 schema = ds_config["schema"]
                 table = ds_config["table"]
 
-                table_fqn = get_table_fqn(
-                    database,
-                    schema,
-                    table,
-                )
-
+                table_fqn = get_table_fqn(database, schema, table)
                 econf_dict["table_fqns"].append(table_fqn)
+
+                exclude_columns = (
+                    ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
+                )
+                if isinstance(exclude_columns, str):
+                    exclude_columns = [exclude_columns]
+
+                table_reflection = get_table_reflection(conman.engine, schema, table)
+                query = build_query(conman, table_reflection, exclude_columns)
+                econf_dict["queries"].append(query)
+
+                print("*********************************")
+                print(query.statement)
+                print("*********************************")
+                raise
+
                 if "queries" in econf_dict:
                     if len(econf_dict["queries"]) > 0:
                         raise AttributeError(
-                            "Same attribute from 'query' and 'table' has to be"
+                            "Same attribute, either query or table has to be"
                             " specified in all candidate datasource confgis"
                         )
                     else:
@@ -132,18 +152,6 @@ class CompareRowTask(BaseTask):
                     "Either 'table' for 'query' must be specified"
                     "in datasource config for row comparison."
                 )
-
-            exclude_columns = (
-                ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
-            )
-            if isinstance(exclude_columns, str):
-                exclude_columns = [exclude_columns]
-            econf_dict["exclude_columns_lol"].append(exclude_columns)
-
-            log.debug(f"Acquiring connection to the database of: {ds_name}")
-            connection_profile = get_connection_profile(self.profile, ds_config)
-            conman = self.get_connection_manager(conn_profile=connection_profile)
-            econf_dict["connection_managers"].append(conman)
 
             if "primary_key" in ds_config:
                 ds_pk = (
@@ -205,7 +213,6 @@ class CompareRowTask(BaseTask):
             log.debug(f"Sample count: {self.sample_count}")
         else:
             query1, query2 = econf_dict["queries"]
-        exclude_columns1, exclude_columns2 = econf_dict["exclude_columns_lol"]
         conman1, conman2 = econf_dict["connection_managers"]
 
         # TODO: push column exclusion down to the database/query
@@ -215,7 +222,8 @@ class CompareRowTask(BaseTask):
         query_expr = None
 
         log.info(f"Comparing {self.datasources}")
-        num_try = 1 if "queries" in econf_dict else 5
+        # num_try = 1 if "queries" in econf_dict else 5
+        num_try = 5
         i = 0
         while i < num_try:
             log.debug(f"Extraction iteration: {i + 1}/{num_try}")
@@ -236,14 +244,6 @@ class CompareRowTask(BaseTask):
                 if k not in df1.columns.tolist():
                     raise ValueError(f"Primary key {k} not present in {table_fqn1}")
 
-            # Exclude columns
-            if len(exclude_columns1) > 0:
-                log.debug(
-                    f"Excluding columns from {econf_dict['ds_names'][0]}: {exclude_columns1}"
-                )
-                df1 = apply_column_exclusion(
-                    df1, primary_key, exclude_columns1, econf_dict["ds_names"][0]
-                )
             if "table_fqns" in econf_dict:
                 query2 = get_table_data_query(
                     dbtype2,
@@ -260,15 +260,6 @@ class CompareRowTask(BaseTask):
             for k in primary_key:
                 if k not in df2.columns.tolist():
                     raise ValueError(f"Primary key {k} not present in {table_fqn2}")
-
-            # Exclude columns
-            if len(exclude_columns2) > 0:
-                log.debug(
-                    f"Excluding columns from {econf_dict['ds_names'][1]}: {exclude_columns2}"
-                )
-                df2 = apply_column_exclusion(
-                    df2, primary_key, exclude_columns2, econf_dict["ds_names"][1]
-                )
 
             if df2.shape[0] > 0:
                 for k in primary_key:
