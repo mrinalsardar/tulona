@@ -241,6 +241,7 @@ class CompareRowTask(BaseTask):
                 log.debug(
                     f"Excluding columns from {econf_dict['ds_names'][0]}: {exclude_columns1}"
                 )
+                exclude_columns1 = [c.lower() for c in exclude_columns1]
                 df1 = apply_column_exclusion(
                     df1, primary_key, exclude_columns1, econf_dict["ds_names"][0]
                 )
@@ -266,6 +267,7 @@ class CompareRowTask(BaseTask):
                 log.debug(
                     f"Excluding columns from {econf_dict['ds_names'][1]}: {exclude_columns2}"
                 )
+                exclude_columns2 = [c.lower() for c in exclude_columns2]
                 df2 = apply_column_exclusion(
                     df2, primary_key, exclude_columns2, econf_dict["ds_names"][1]
                 )
