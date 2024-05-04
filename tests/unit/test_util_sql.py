@@ -199,7 +199,7 @@ def test_get_metadata_query(database, schema, table, expected):
             False,
             """
     select
-        avg(cast(Age as decimal)) as Age_average
+        avg(cast(Age as decimal)) as Age_avg
     from database.schema.table
     """,
         ),
