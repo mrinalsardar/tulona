@@ -131,7 +131,7 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
         "min": "min(cast({} as decimal)) as {}_min",
         "max": "max(cast({} as decimal)) as {}_max",
         "avg": "avg(cast({} as decimal)) as {}_avg",
-        "average": "avg(cast({} as decimal) as {}_average",
+        "average": "avg(cast({} as decimal)) as {}_avg",
     }
     timestamp_function_map = {
         "min": "min({}) as {}_min",
