@@ -42,7 +42,7 @@ def get_result_dir(dir_dict: dict, base: Union[str, Path], key: str) -> Path:
 
 # TODO: Testable - pull current timestamp from caller
 def get_final_outdir(basedir: str, task_conf: str):
-    out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
 
     task = task_conf["task"].replace("-", "")
     ds_list = [ds.split(":")[0].replace("_", "") for ds in task_conf["datasources"]]
