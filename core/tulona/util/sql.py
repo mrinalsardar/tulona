@@ -119,32 +119,23 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
         "timestamp_tz",
         "timestamp_ltz",
         "timestamp_ntz",
-        "timestamp with time zone",  # TODO probably incorrect representation
+        "timestamp with time zone",  # TODO: probably incorrect representation
         "timestamp without time zone",
     ]
 
-    numeric_funcs = [
-        "min",
-        "max",
-        "average",
-        "avg",
-    ]
-    timestamp_funcs = [
-        "min",
-        "max",
-    ]
-    generic_funcs = [
-        "count",
-        "distinct_count",
-    ]
-
-    function_map = {
-        "min": "min({}) as {}_min",
-        "max": "max({}) as {}_max",
-        "avg": "avg({}) as {}_avg",
-        "average": "avg({}) as {}_average",
+    generic_function_map = {
         "count": "count({}) as {}_count",
         "distinct_count": "count(distinct({})) as {}_distinct_count",
+    }
+    numeric_function_map = {
+        "min": "min(cast({} as decimal)) as {}_min",
+        "max": "max(cast({} as decimal)) as {}_max",
+        "avg": "avg(cast({} as decimal)) as {}_avg",
+        "average": "avg(cast({} as decimal) as {}_average",
+    }
+    timestamp_function_map = {
+        "min": "min({}) as {}_min",
+        "max": "max({}) as {}_max",
     }
 
     call_funcs = []
@@ -152,13 +143,23 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
         dtype = dtype.lower()
         qp = []
         for m in metrics:
-            if (
-                (m in numeric_funcs and dtype in numeric_types)
-                or (m in timestamp_funcs and dtype in timestamp_types)
-                or (m in generic_funcs)
-            ):
+            if m in generic_function_map:
                 qp.append(
-                    function_map[m.lower()].format(f'"{col}"' if quoted else col, col)
+                    generic_function_map[m.lower()].format(
+                        f'"{col}"' if quoted else col, col
+                    )
+                )
+            elif m in numeric_function_map and dtype in numeric_types:
+                qp.append(
+                    numeric_function_map[m.lower()].format(
+                        f'"{col}"' if quoted else col, col
+                    )
+                )
+            elif m in timestamp_function_map and dtype in timestamp_types:
+                qp.append(
+                    timestamp_function_map[m.lower()].format(
+                        f'"{col}"' if quoted else col, col
+                    )
                 )
             else:
                 qp.append(f"'NA' as {col}_{m.lower()}")
