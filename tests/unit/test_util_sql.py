@@ -167,7 +167,7 @@ def test_get_metadata_query(database, schema, table, expected):
             False,
             """
     select
-        max(Age) as Age_max
+        max(cast(Age as decimal)) as Age_max
     from database.schema.table
     """,
         ),
@@ -199,7 +199,7 @@ def test_get_metadata_query(database, schema, table, expected):
             False,
             """
     select
-        avg(Age) as Age_average
+        avg(cast(Age as decimal)) as Age_avg
     from database.schema.table
     """,
         ),
