@@ -69,7 +69,7 @@ class CompareRowTask(BaseTask):
         econf_dict["dbtypes"] = []
         econf_dict["table_fqns"] = []
         econf_dict["table_meta"] = []
-        econf_dict["queries"] = []
+        econf_dict["base_queries"] = []
         econf_dict["connection_managers"] = []
         econf_dict["select_expr"] = []
         for ds_name in self.datasources:
@@ -97,20 +97,12 @@ class CompareRowTask(BaseTask):
                 )
 
             if "query" in ds_config:
-                econf_dict["queries"].append(ds_config["query"])
+                econf_dict["base_queries"].append(ds_config["query"])
                 if "schema" in ds_config:
                     log.warning(
                         "Attribute 'schema' doesn't have any effect"
                         " with attribute 'query'"
                     )
-                if "table_fqns" in econf_dict:
-                    if len(econf_dict["table_fqns"]) > 0:
-                        raise AttributeError(
-                            "Same attribute, either query or table has to be"
-                            " specified in all candidate datasource confgis"
-                        )
-                    else:
-                        econf_dict.pop("table_fqns")
 
             elif "table" in ds_config:
                 # MySQL doesn't have logical database
@@ -132,21 +124,12 @@ class CompareRowTask(BaseTask):
 
                 table_reflection = get_table_reflection(conman.engine, schema, table)
                 query = build_query(conman, table_reflection, exclude_columns)
-                econf_dict["queries"].append(query)
+                econf_dict["base_queries"].append(query)
 
                 print("*********************************")
                 print(query.statement)
                 print("*********************************")
-                raise
 
-                if "queries" in econf_dict:
-                    if len(econf_dict["queries"]) > 0:
-                        raise AttributeError(
-                            "Same attribute, either query or table has to be"
-                            " specified in all candidate datasource confgis"
-                        )
-                    else:
-                        econf_dict.pop("queries")
             else:
                 raise TulonaMissingPropertyError(
                     "Either 'table' for 'query' must be specified"
@@ -215,11 +198,10 @@ class CompareRowTask(BaseTask):
             query1, query2 = econf_dict["queries"]
         conman1, conman2 = econf_dict["connection_managers"]
 
-        # TODO: push column exclusion down to the database/query
         # TODO: We probably don't need to create pk tuple out of pk
         # lists as that is already happening while extracting pks
         primary_key = tuple([k.lower() for k in econf_dict["primary_key"]])
-        query_expr = None
+        filter_expr = None
 
         log.info(f"Comparing {self.datasources}")
         # num_try = 1 if "queries" in econf_dict else 5
@@ -230,7 +212,7 @@ class CompareRowTask(BaseTask):
 
             if "table_fqns" in econf_dict:
                 query1 = get_table_data_query(
-                    dbtype1, table_fqn1, self.sample_count, query_expr
+                    dbtype1, table_fqn1, self.sample_count, filter_expr
                 )
 
             sanitized_query1 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query1)
@@ -249,7 +231,7 @@ class CompareRowTask(BaseTask):
                     dbtype2,
                     table_fqn2,
                     self.sample_count,
-                    query_expr=build_filter_query_expression(df1, primary_key),
+                    filter_expr=build_filter_query_expression(df1, primary_key),
                 )
             sanitized_query2 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query2)
             log.debug(f"Executing query: {sanitized_query2}")
@@ -267,7 +249,7 @@ class CompareRowTask(BaseTask):
                 row_data_list = [df1, df2]
                 break
             else:
-                query_expr = build_filter_query_expression(
+                filter_expr = build_filter_query_expression(
                     df1, primary_key, positive=False
                 )
 
@@ -322,6 +304,9 @@ class CompareColumnTask(BaseTask):
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     composite: bool = DEFAULT_VALUES["compare_column_composite"]
+
+    def prepare_comparison(self):
+        pass
 
     def execute(self):
         log.info("------------------------ Starting task: compare-column")
@@ -431,14 +416,9 @@ class CompareColumnTask(BaseTask):
                 indicator="presence",
                 validate="one_to_one",
             )
-            df_comp = df_comp[df_comp["presence"] != "both"]
-            df_comp["presence"] = df_comp["presence"].map(
-                {
-                    "left_only": ds_compressed_names[0],
-                    "right_only": ds_compressed_names[1],
-                }
+            log.debug(
+                f"Found {df_comp[df_comp['presence'] != 'both'].shape[0]} mismatches"
             )
-            log.debug(f"Found {df_comp.shape[0]} mismatches all sides combined")
             output_dataframes["-".join(compare_columns)] = df_comp
         else:
             for c in compare_columns:
@@ -454,15 +434,19 @@ class CompareColumnTask(BaseTask):
                     indicator="presence",
                     validate="one_to_one",
                 )
-                df_comp = df_comp[df_comp["presence"] != "both"]
-                df_comp["presence"] = df_comp["presence"].map(
-                    {
-                        "left_only": ds_compressed_names[0],
-                        "right_only": ds_compressed_names[1],
-                    }
+                log.debug(
+                    f"Found {df_comp[df_comp['presence'] != 'both'].shape[0]} mismatches"
                 )
-                log.debug(f"Found {df_comp.shape[0]} mismatches all sides combined")
                 output_dataframes[c] = df_comp
+
+        for df in output_dataframes:
+            df = df[df["presence"] != "both"]
+            df["presence"] = df["presence"].map(
+                {
+                    "left_only": ds_compressed_names[0],
+                    "right_only": ds_compressed_names[1],
+                }
+            )
 
         log.debug(f"Writing output into: {self.outfile_fqn}")
         _ = create_dir_if_not_exist(self.outfile_fqn.parent)

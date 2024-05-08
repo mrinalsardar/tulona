@@ -2,7 +2,6 @@ import logging
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
-
 from tulona.adapter.connection import ConnectionManager
 from tulona.util.sql import (
     get_metadata_query,
@@ -122,3 +121,7 @@ def perform_comparison(
     df_merge = df_merge[new_columns]
 
     return df_merge
+
+
+def perform_column_comparison(queries, primary_key):
+    pass
