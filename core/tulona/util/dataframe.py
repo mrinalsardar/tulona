@@ -27,6 +27,8 @@ def apply_column_exclusion(
 
     if len(missing_cols) > 0:
         log.warning(f"Columns {missing_cols} to be excluded are not present in {ds_name}")
+        exclude_columns = list(set(exclude_columns) - set(missing_cols))
 
-    df = df.drop(columns=exclude_columns)
+    if len(exclude_columns):
+        df = df.drop(columns=exclude_columns)
     return df
