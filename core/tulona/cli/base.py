@@ -1,5 +1,6 @@
 import logging
 import traceback
+from datetime import datetime
 from pathlib import Path
 
 import click
@@ -15,11 +16,23 @@ from tulona.task.profile import ProfileTask
 from tulona.task.scan import ScanTask
 from tulona.util.filesystem import get_final_outdir
 
-log = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
+log = logging.getLogger()
+log_formatter = logging.Formatter(
+    "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 )
+
+consloe_handler = logging.StreamHandler()
+consloe_handler.setFormatter(log_formatter)
+consloe_handler.setLevel(logging.INFO)
+log.addHandler(consloe_handler)
+
+log_dir = Path(Path().absolute(), "log")
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file_fqn = Path(log_dir, f"tulona_{datetime.now().strftime('%Y%m%d%H%M%S')}.log")
+file_handler = logging.FileHandler(log_file_fqn)
+file_handler.setFormatter(log_formatter)
+file_handler.setLevel(logging.DEBUG)
+log.addHandler(file_handler)
 
 
 # command: tulona

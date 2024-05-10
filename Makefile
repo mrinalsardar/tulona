@@ -11,7 +11,6 @@ test-build:
 	python -m build && twine check dist/*
 
 validate-merge: run-tests test-build
-	python -m build && twine check dist/*
 
 # TODO: introduce --project-dir param for the following to work
 # regression-test:

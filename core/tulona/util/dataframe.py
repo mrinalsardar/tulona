@@ -1,8 +1,11 @@
+import logging
 from typing import List, Tuple, Union
 
 import pandas as pd
 
 from tulona.exceptions import TulonaFundamentalError
+
+log = logging.getLogger(__name__)
 
 
 def apply_column_exclusion(
@@ -23,9 +26,9 @@ def apply_column_exclusion(
             missing_cols.append(col)
 
     if len(missing_cols) > 0:
-        raise ValueError(
-            f"Columns [{missing_cols}] to be excluded are not present in {ds_name}"
-        )
+        log.warning(f"Columns {missing_cols} to be excluded are not present in {ds_name}")
+        exclude_columns = list(set(exclude_columns) - set(missing_cols))
 
-    df = df.drop(columns=exclude_columns)
+    if len(exclude_columns):
+        df = df.drop(columns=exclude_columns)
     return df

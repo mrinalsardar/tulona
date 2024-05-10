@@ -45,23 +45,6 @@ from tulona.util.dataframe import apply_column_exclusion
                 match="Cannot exclude primary key/join key",
             ),
         ),
-        pytest.param(
-            pd.DataFrame(
-                {
-                    "A": [1, 2, 3, 4],
-                    "B": ["a", "b", "c", "d"],
-                    "C": [True, False, True, False],
-                }
-            ),
-            "A",
-            ["D"],
-            "table",
-            None,
-            marks=pytest.mark.xfail(
-                raises=ValueError,
-                match="to be excluded are not present in",
-            ),
-        ),
     ],
 )
 def test_apply_column_exclusion(df, primary_key, exclude_columns, table, expected):
