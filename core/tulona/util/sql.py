@@ -14,8 +14,10 @@ def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
     dbtype = dbtype.lower()
 
     # TODO: validate sampling mechanism for maximum possible randomness
-    if dbtype in ["snowflake", "mssql"]:
+    if dbtype == "snowflake":
         query = f"select * from {table_name} tablesample ({sample_count} rows)"
+    elif dbtype == "mssql":
+        query = f"select top {sample_count} * from {table_name}"
     elif dbtype == "postgres":
         # TODO: system_rows method not implemented, tablesample works for percentage selection
         # query = f"select * from {table_name} tablesample system_rows({sample_count})"

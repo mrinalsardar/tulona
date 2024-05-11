@@ -31,19 +31,14 @@ def create_dir_if_not_exist(d: Union[str, Path]) -> Path:
     return p
 
 
-def get_output_base_dir(base: str) -> Path:
-    return create_or_replace_dir(base)
-
-
-def get_result_dir(dir_dict: dict, base: Union[str, Path], key: str) -> Path:
-    p = Path(get_output_base_dir(base), dir_dict[key])
-    return create_or_replace_dir(p)
+def get_run_result_dir(basedir: str):
+    out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    run_dir = Path(basedir, f"run_{out_timestamp}")
+    return run_dir
 
 
 # TODO: Testable - pull current timestamp from caller
-def get_final_outdir(basedir: str, task_conf: str):
-    out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
-
+def get_task_outdir(run_dir: str, task_conf: str):
     task = task_conf["task"].replace("-", "")
     ds_list = [ds.split(":")[0].replace("_", "") for ds in task_conf["datasources"]]
     extra_params = []
@@ -54,8 +49,6 @@ def get_final_outdir(basedir: str, task_conf: str):
             else:
                 extra_params.append(p.replace("_", ""))
 
-    innerdir = (
-        f"{'_'.join(ds_list)}_{task}_{'_'.join(extra_params)}_{out_timestamp}".lower()
-    )
-    final_outdir = Path(basedir, innerdir)
+    innerdir = f"{'_'.join(ds_list)}_{task}{'_' + '_'.join(extra_params) if len(extra_params) > 0 else ''}".lower()
+    final_outdir = Path(run_dir, innerdir)
     return final_outdir

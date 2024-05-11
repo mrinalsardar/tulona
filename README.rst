@@ -340,10 +340,6 @@ Also setting up `task_config` can be greatly benificial as you can set up differ
 
 Please look at the sample project config from above to understand how to set up `task_config` property.
 
-For debug level log, add `-v` or `--verbose` flag along with any command. For example:
-
-``tulona ping -v --datasources employee_postgres``
-
 To know more about any specific command, execute `tulona <command> -h`.
 
 
@@ -368,7 +364,7 @@ Supported Data Platforms
 
 Development Environment Setup
 -----------------------------
-* For live installation execute `pip install -e .` and `pip install -r dev-requirements.txt`.
+* For live installation execute `pip install -e ".[dev]"`.
 
 
 Build Wheel Executable

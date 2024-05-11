@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Union
 
-from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPropertyError, TulonaUnSupportedTaskError
 from tulona.task.base import BaseTask
 from tulona.task.compare import CompareTask
@@ -32,7 +31,6 @@ META_EXCLUSION = {
 class ScanTask(BaseTask):
     profile: Dict
     project: Dict
-    runtime: RunConfig
     datasources: List[str]
     final_outdir: Union[Path, str]
     compare: bool = DEFAULT_VALUES["compare_scans"]
@@ -372,7 +370,6 @@ class ScanTask(BaseTask):
                     CompareTask(
                         profile=self.profile,
                         project=dynamic_project_config,
-                        runtime=self.runtime,
                         datasources=source_map_item,
                         outfile_fqn=table_outfile_fqn,
                         sample_count=self.sample_count,
