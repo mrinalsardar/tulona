@@ -7,7 +7,6 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from tulona.config.runtime import RunConfig
 from tulona.task.base import BaseTask
 from tulona.task.helper import create_profile, perform_comparison
 from tulona.util.excel import highlight_mismatch_cells
@@ -25,7 +24,6 @@ DEFAULT_VALUES = {
 class ProfileTask(BaseTask):
     profile: Dict
     project: Dict
-    runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     compare: bool = DEFAULT_VALUES["compare_profiles"]

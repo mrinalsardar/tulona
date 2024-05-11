@@ -38,7 +38,7 @@ def test_get_table_fqn(database, schema, table, expected):
             "mssql",
             "database.schema.table",
             20,
-            "select * from database.schema.table tablesample (20 rows)",
+            "select top 20 * from database.schema.table",
         ),
         (
             "postgres",

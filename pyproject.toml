@@ -39,6 +39,20 @@ keywords = [
   "database profile",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "flake8",
+  "coverage",
+  "black",
+  "isort",
+  "pytest-cov",
+  "faker",
+  "bump-my-version",
+  "build",
+  "twine",
+]
+
 [project.scripts]
 tulona = "tulona.cli.base:cli"
 

@@ -10,7 +10,6 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
 from tulona.task.base import BaseTask
 from tulona.task.helper import perform_comparison
@@ -40,7 +39,6 @@ DEFAULT_VALUES = {
 class CompareRowTask(BaseTask):
     profile: Dict
     project: Dict
-    runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     sample_count: int = DEFAULT_VALUES["sample_count"]
@@ -229,7 +227,9 @@ class CompareRowTask(BaseTask):
             log.debug(f"Executing query: {sanitized_query1}")
             df1 = get_query_output_as_df(connection_manager=conman1, query_text=query1)
             if df1.shape[0] == 0:
-                raise ValueError(f"Table {table_fqn1} doesn't have any data")
+                log.warning(f"Couldn't extract rows from {table_fqn1}")
+                i += 1
+                continue
 
             df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
             for k in primary_key:
@@ -329,7 +329,6 @@ class CompareRowTask(BaseTask):
 class CompareColumnTask(BaseTask):
     profile: Dict
     project: Dict
-    runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     composite: bool = DEFAULT_VALUES["compare_column_composite"]
@@ -493,7 +492,6 @@ class CompareColumnTask(BaseTask):
 class CompareTask(BaseTask):
     profile: Dict
     project: Dict
-    runtime: RunConfig
     datasources: List[str]
     outfile_fqn: Union[Path, str]
     sample_count: int = DEFAULT_VALUES["sample_count"]
@@ -518,7 +516,6 @@ class CompareTask(BaseTask):
             ProfileTask(
                 profile=self.profile,
                 project=self.project,
-                runtime=self.runtime,
                 datasources=self.datasources,
                 outfile_fqn=self.outfile_fqn,
                 compare=True,
@@ -531,7 +528,6 @@ class CompareTask(BaseTask):
         cdt = CompareRowTask(
             profile=self.profile,
             project=self.project,
-            runtime=self.runtime,
             datasources=self.datasources,
             outfile_fqn=self.outfile_fqn,
             sample_count=self.sample_count,
@@ -551,7 +547,6 @@ class CompareTask(BaseTask):
             CompareColumnTask(
                 profile=self.profile,
                 project=project_copy,
-                runtime=self.runtime,
                 datasources=self.datasources,
                 outfile_fqn=self.outfile_fqn,
                 composite=self.composite,

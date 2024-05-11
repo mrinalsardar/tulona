@@ -8,13 +8,12 @@ import click
 from tulona.cli import params as p
 from tulona.config.profile import Profile
 from tulona.config.project import Project
-from tulona.config.runtime import RunConfig
 from tulona.exceptions import TulonaMissingPropertyError
 from tulona.task.compare import CompareColumnTask, CompareRowTask, CompareTask
 from tulona.task.ping import PingTask
 from tulona.task.profile import ProfileTask
 from tulona.task.scan import ScanTask
-from tulona.util.filesystem import get_final_outdir
+from tulona.util.filesystem import get_run_result_dir, get_task_outdir
 
 log = logging.getLogger()
 log_formatter = logging.Formatter(
@@ -44,28 +43,25 @@ log.addHandler(file_handler)
 @click.pass_context
 def cli(ctx):
     """Tulona compares data sources to find out differences"""
+    logging.getLogger("tulona").setLevel(logging.DEBUG)
+
+    prof = Profile()
+    proj = Project()
+    ctx.obj = ctx.obj or {}
+    ctx.obj["project"] = proj.load_project_config()
+    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
+    ctx.obj["project"]["run_result_dir"] = get_run_result_dir(
+        basedir=ctx.obj["project"]["outdir"]
+    )
 
 
 # command: tulona ping
 @cli.command("ping")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 @p.datasources
 def ping(ctx, **kwargs):
     """Test connectivity to datasources"""
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-        logging.getLogger("snowflake").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
 
     ping_tasks = []
     if kwargs["datasources"]:
@@ -97,30 +93,12 @@ def ping(ctx, **kwargs):
 @cli.command("scan")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 @p.datasources
 @p.compare
 @p.sample_count
 @p.composite
 def scan(ctx, **kwargs):
     """Scan data sources to collect metadata"""
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-    # Override config outdir if provided in command line
-    if kwargs["outdir"]:
-        ctx.obj["project"]["outdir"] = kwargs["outdir"]
-
     scan_tasks = []
     if kwargs["datasources"]:
         task_config = {
@@ -146,15 +124,14 @@ def scan(ctx, **kwargs):
 
     for tconf in scan_tasks:
         log.debug(f"Executing scan with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
 
         ScanTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             final_outdir=final_outdir,
             compare=tconf["compare"] if "compare" in tconf else None,
@@ -167,28 +144,10 @@ def scan(ctx, **kwargs):
 @cli.command("profile")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 @p.datasources
 @p.compare
 def profile(ctx, **kwargs):
     """Profile data sources to collect metadata [row count, column min/max/mean etc.]"""
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-    # Override config outdir if provided in command line
-    if kwargs["outdir"]:
-        ctx.obj["project"]["outdir"] = kwargs["outdir"]
-
     profile_tasks = []
     if kwargs["datasources"]:
         task_config = {
@@ -212,8 +171,8 @@ def profile(ctx, **kwargs):
 
     for tconf in profile_tasks:
         log.debug(f"Executing profile with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
@@ -221,7 +180,6 @@ def profile(ctx, **kwargs):
         ProfileTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             compare=tconf["compare"] if "compare" in tconf else None,
@@ -232,28 +190,10 @@ def profile(ctx, **kwargs):
 @cli.command("compare-row")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 @p.datasources
 @p.sample_count
 def compare_row(ctx, **kwargs):
     """Compares rows from two data entities"""
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-    # Override config outdir if provided in command line
-    if kwargs["outdir"]:
-        ctx.obj["project"]["outdir"] = kwargs["outdir"]
-
     compare_row_tasks = []
     if kwargs["datasources"]:
         task_config = {
@@ -277,8 +217,8 @@ def compare_row(ctx, **kwargs):
 
     for tconf in compare_row_tasks:
         log.debug(f"Executing compare-row with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
@@ -286,7 +226,6 @@ def compare_row(ctx, **kwargs):
         CompareRowTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
@@ -297,8 +236,6 @@ def compare_row(ctx, **kwargs):
 @cli.command("compare-column")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 @p.datasources
 @p.composite
 def compare_column(ctx, **kwargs):
@@ -308,22 +245,6 @@ def compare_column(ctx, **kwargs):
     all the datasource[project] configs
     (check sample tulona-project.yml file for example)
     """
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-    # Override config outdir if provided in command line
-    if kwargs["outdir"]:
-        ctx.obj["project"]["outdir"] = kwargs["outdir"]
-
     compare_column_tasks = []
     if kwargs["datasources"]:
         task_config = {
@@ -347,8 +268,8 @@ def compare_column(ctx, **kwargs):
 
     for tconf in compare_column_tasks:
         log.debug(f"Executing compare-column with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
@@ -356,7 +277,6 @@ def compare_column(ctx, **kwargs):
         CompareColumnTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             composite=tconf["composite"] if "composite" in tconf else None,
@@ -367,8 +287,6 @@ def compare_column(ctx, **kwargs):
 @cli.command("compare")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 @p.datasources
 @p.sample_count
 @p.composite
@@ -376,22 +294,6 @@ def compare(ctx, **kwargs):
     """
     Compare everything(profiles, rows and columns) for the given datasoures
     """
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
-    # Override config outdir if provided in command line
-    if kwargs["outdir"]:
-        ctx.obj["project"]["outdir"] = kwargs["outdir"]
-
     compare_tasks = []
     if kwargs["datasources"]:
         task_config = {
@@ -417,8 +319,8 @@ def compare(ctx, **kwargs):
 
     for tconf in compare_tasks:
         log.debug(f"Executing compare with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
@@ -426,7 +328,6 @@ def compare(ctx, **kwargs):
         CompareTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
@@ -438,30 +339,12 @@ def compare(ctx, **kwargs):
 @cli.command("run")
 @click.pass_context
 # @p.exec_engine
-@p.outdir
-@p.verbose
 def run(ctx, **kwargs):
     """Run all tasks defined by `task_config` attribute in the project config file"""
-
-    if kwargs["verbose"]:
-        logging.getLogger("tulona").setLevel(logging.DEBUG)
-
-    prof = Profile()
-    proj = Project()
-
-    ctx.obj = ctx.obj or {}
-    ctx.obj["project"] = proj.load_project_config()
-    ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["runtime"] = RunConfig(options=kwargs, project=ctx.obj["project"])
-
     if "task_config" not in ctx.obj["project"]:
         raise TulonaMissingPropertyError(
             "Attribute `task_config` is not defined in project config"
         )
-
-    # Override config outdir if provided in command line
-    if kwargs["outdir"]:
-        ctx.obj["project"]["outdir"] = kwargs["outdir"]
 
     # Extract tasks
     ping_tasks = [t for t in ctx.obj["project"]["task_config"] if t["task"] == "ping"]
@@ -491,8 +374,8 @@ def run(ctx, **kwargs):
     # ProfileTask
     for tconf in profile_tasks:
         log.debug(f"Executing profile with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
@@ -501,7 +384,6 @@ def run(ctx, **kwargs):
             ProfileTask(
                 profile=ctx.obj["profile"],
                 project=ctx.obj["project"],
-                runtime=ctx.obj["runtime"],
                 datasources=tconf["datasources"],
                 outfile_fqn=outfile_fqn,
                 compare=tconf["compare"] if "compare" in tconf else None,
@@ -512,8 +394,8 @@ def run(ctx, **kwargs):
     # CompareRowTask
     for tconf in compare_row_tasks:
         log.debug(f"Executing compare-row with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
@@ -522,7 +404,6 @@ def run(ctx, **kwargs):
             CompareRowTask(
                 profile=ctx.obj["profile"],
                 project=ctx.obj["project"],
-                runtime=ctx.obj["runtime"],
                 datasources=tconf["datasources"],
                 outfile_fqn=outfile_fqn,
                 sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
@@ -533,8 +414,8 @@ def run(ctx, **kwargs):
     # CompareColumnTask
     for tconf in compare_column_tasks:
         log.debug(f"Executing compare-column with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
@@ -543,7 +424,6 @@ def run(ctx, **kwargs):
             CompareColumnTask(
                 profile=ctx.obj["profile"],
                 project=ctx.obj["project"],
-                runtime=ctx.obj["runtime"],
                 datasources=tconf["datasources"],
                 outfile_fqn=outfile_fqn,
                 composite=tconf["composite"] if "composite" in tconf else None,
@@ -554,8 +434,8 @@ def run(ctx, **kwargs):
     # CompareTask
     for tconf in compare_tasks:
         log.debug(f"Executing compare with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
@@ -563,7 +443,6 @@ def run(ctx, **kwargs):
         CompareTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
@@ -573,15 +452,14 @@ def run(ctx, **kwargs):
     # ScanTask
     for tconf in scan_tasks:
         log.debug(f"Executing scan with task profile: {tconf}")
-        final_outdir = get_final_outdir(
-            basedir=ctx.obj["project"]["outdir"],
+        final_outdir = get_task_outdir(
+            run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
 
         ScanTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
-            runtime=ctx.obj["runtime"],
             datasources=tconf["datasources"],
             final_outdir=final_outdir,
             compare=tconf["compare"] if "compare" in tconf else None,
