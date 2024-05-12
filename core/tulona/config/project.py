@@ -34,8 +34,6 @@ class Project:
         return Path(self.get_project_root, PROJECT_FILE_NAME)
 
     def validate_project_config(self, project_dict_raw: Dict) -> bool:
-        log.debug(f'task_config: {project_dict_raw["task_config"]}')
-
         try:
             _ = ProjectModel(**project_dict_raw)
         except TulonaInvalidProjectConfigError as exc:

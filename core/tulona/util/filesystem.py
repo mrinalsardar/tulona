@@ -32,8 +32,8 @@ def create_dir_if_not_exist(d: Union[str, Path]) -> Path:
 
 
 def get_run_result_dir(basedir: str):
-    out_timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
-    run_dir = Path(basedir, f"run_{out_timestamp}")
+    out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+    run_dir = Path(basedir, f"runid__{out_timestamp}")
     return run_dir
 
 
