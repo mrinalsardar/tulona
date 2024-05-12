@@ -46,17 +46,22 @@ def get_query_output_as_df(connection_manager, query_text: str):  # pragma: no c
 
 
 def build_filter_query_expression(
-    df: pd.DataFrame, primary_key: Union[List, Tuple, str], positive: bool = True
+    df: pd.DataFrame,
+    primary_key: Union[List, Tuple, str],
+    quoted: bool = False,
+    positive: bool = True,
 ):
     expr_list = []
     primary_key = [primary_key] if isinstance(primary_key, str) else primary_key
     for k in primary_key:
-        primary_key_values = df[k].tolist()
+        primary_key_values = df[k.lower()].tolist()
 
-        if pd.api.types.is_numeric_dtype(df[k]):
+        if pd.api.types.is_numeric_dtype(df[k.lower()]):
             primary_key_values = [str(k) for k in primary_key_values]
+            k = f'"{k}"' if quoted else k
             query_expr = f"""{k}{'' if positive else ' not'} in ({", ".join(primary_key_values)})"""
         else:
+            k = f'"{k}"' if quoted else k
             query_expr = f"""{k}{'' if positive else ' not'} in ('{"', '".join(primary_key_values)}')"""
 
         expr_list.append(query_expr)

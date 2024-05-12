@@ -118,6 +118,5 @@ class ProfileTask(BaseTask):
                     df.insert(loc=0, column="column_name", value=primary_key_col)
                     df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
 
-        end_time = time.time()
-        log.info("------------------------ Finished task: profile")
-        log.info(f"Total time taken: {(end_time - start_time):.2f} seconds")
+        exec_time = time.time() - start_time
+        log.info(f"Finished task: profile in {exec_time:.2f} seconds")

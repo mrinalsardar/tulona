@@ -32,6 +32,7 @@ file_handler = logging.FileHandler(log_file_fqn)
 file_handler.setFormatter(log_formatter)
 file_handler.setLevel(logging.DEBUG)
 log.addHandler(file_handler)
+# TODO: Logs of this file are not getting out (-_-)
 
 
 # command: tulona
@@ -44,6 +45,7 @@ log.addHandler(file_handler)
 def cli(ctx):
     """Tulona compares data sources to find out differences"""
     logging.getLogger("tulona").setLevel(logging.DEBUG)
+    logging.getLogger(__name__).info(f"Writing debug log into: {log_file_fqn}")
 
     prof = Profile()
     proj = Project()
