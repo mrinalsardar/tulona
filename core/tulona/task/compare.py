@@ -10,7 +10,11 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from tulona.exceptions import TulonaMissingPrimaryKeyError, TulonaMissingPropertyError
+from tulona.exceptions import (
+    TulonaMissingPrimaryKeyError,
+    TulonaMissingPropertyError,
+    TulonaUnsupportedQueryError,
+)
 from tulona.task.base import BaseTask
 from tulona.task.helper import perform_comparison
 from tulona.task.profile import ProfileTask
@@ -209,7 +213,7 @@ class CompareRowTask(BaseTask):
         # TODO: push column exclusion down to the database/query
         # TODO: We probably don't need to create pk tuple out of pk
         # lists as that is already happening while extracting pks
-        primary_key = tuple([k.lower() for k in econf_dict["primary_key"]])
+        primary_key = tuple([k for k in econf_dict["primary_key"]])
         query_expr = None
 
         log.info(f"Comparing {self.datasources}")
@@ -225,7 +229,40 @@ class CompareRowTask(BaseTask):
 
             sanitized_query1 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query1)
             log.debug(f"Executing query: {sanitized_query1}")
-            df1 = get_query_output_as_df(connection_manager=conman1, query_text=query1)
+
+            try:
+                df1 = get_query_output_as_df(
+                    connection_manager=conman1, query_text=query1
+                )
+            except Exception as exc:
+                log.warning(f"Previous query failed with error: {exc}")
+                if "table_fqns" not in econf_dict:
+                    raise TulonaUnsupportedQueryError(
+                        "The provided query is unsupported!"
+                        " Please try to execute it in the database platform first."
+                    )
+                log.debug(
+                    "Trying query with quoted column names for the filter expression"
+                )
+                if query_expr and i > 0:
+                    query_expr = build_filter_query_expression(
+                        df1, primary_key, quoted=True, positive=False
+                    )
+                else:
+                    raise TulonaUnsupportedQueryError(
+                        "Something is wrong with following query,"
+                        " please try to execute it in the database platform first."
+                        f" Query: {query1}"
+                    )
+                query1 = get_table_data_query(
+                    dbtype1, table_fqn1, self.sample_count, query_expr
+                )
+                sanitized_query1 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query1)
+                log.debug(f"Executing query: {sanitized_query1}")
+                df1 = get_query_output_as_df(
+                    connection_manager=conman1, query_text=query1
+                )
+
             if df1.shape[0] == 0:
                 log.warning(f"Couldn't extract rows from {table_fqn1}")
                 i += 1
@@ -233,7 +270,7 @@ class CompareRowTask(BaseTask):
 
             df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
             for k in primary_key:
-                if k not in df1.columns.tolist():
+                if k.lower() not in df1.columns.tolist():
                     raise ValueError(f"Primary key {k} not present in {table_fqn1}")
 
             # Exclude columns
@@ -255,11 +292,38 @@ class CompareRowTask(BaseTask):
             sanitized_query2 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query2)
             log.debug(f"Executing query: {sanitized_query2}")
 
-            df2 = get_query_output_as_df(connection_manager=conman2, query_text=query2)
+            try:
+                df2 = get_query_output_as_df(
+                    connection_manager=conman2, query_text=query2
+                )
+            except Exception as exc:
+                log.warning(f"Previous query failed with error: {exc}")
+                if "table_fqns" not in econf_dict:
+                    raise TulonaUnsupportedQueryError(
+                        "The provided query is unsupported!"
+                        " Please try to execute it in the database platform first."
+                    )
+                log.debug(
+                    "Trying query with quoted column names for the filter expression"
+                )
+                query2 = get_table_data_query(
+                    dbtype2,
+                    table_fqn2,
+                    self.sample_count,
+                    query_expr=build_filter_query_expression(
+                        df1, primary_key, quoted=True
+                    ),
+                )
+                sanitized_query2 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query2)
+                log.debug(f"Executing query: {sanitized_query2}")
+                df2 = get_query_output_as_df(
+                    connection_manager=conman2, query_text=query2
+                )
+
             df2 = df2.rename(columns={c: c.lower() for c in df2.columns})
 
             for k in primary_key:
-                if k not in df2.columns.tolist():
+                if k.lower() not in df2.columns.tolist():
                     raise ValueError(f"Primary key {k} not present in {table_fqn2}")
 
             # Exclude columns
@@ -274,6 +338,7 @@ class CompareRowTask(BaseTask):
 
             if df2.shape[0] > 0:
                 for k in primary_key:
+                    k = k.lower()
                     df1 = df1[df1[k].isin(df2[k].tolist())]
                 row_data_list = [df1, df2]
                 break
@@ -302,8 +367,9 @@ class CompareRowTask(BaseTask):
         log.debug(f"Writing comparison result into: {self.outfile_fqn}")
         # TODO: Remove it as it is already happening in perform_comparison
         # Moving key columns to the beginning
-        new_columns = list(primary_key) + [
-            col for col in df_row_comp if col not in primary_key
+        primary_key_lower = [k.lower() for k in primary_key]
+        new_columns = primary_key_lower + [
+            col.lower() for col in df_row_comp if col not in primary_key_lower
         ]
         df_row_comp = df_row_comp[new_columns]
 
@@ -318,7 +384,7 @@ class CompareRowTask(BaseTask):
             excel_file=self.outfile_fqn,
             sheet="Row Comparison",
             num_ds=len(self.datasources),
-            skip_columns=primary_key,
+            skip_columns=primary_key_lower,
         )
 
         exec_time = time.time() - start_time
