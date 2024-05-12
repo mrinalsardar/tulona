@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ class ProjectModel(BaseModel):
     engine: str = "pandas"
     outdir: str = "output"
     datasources: Dict
-    task_config: List[Dict] = list()
+    task_config: Optional[List[Dict]]
 
 
 class Project:
@@ -33,9 +33,9 @@ class Project:
     def project_conf_path(self) -> str:
         return Path(self.get_project_root, PROJECT_FILE_NAME)
 
-    def validate_project_config(self, project_dict_raw: Dict) -> bool:
+    def validate_project_config(self, project_dict_raw: Dict) -> Dict:
         try:
-            _ = ProjectModel(**project_dict_raw)
+            return ProjectModel(**project_dict_raw).model_dump()
         except TulonaInvalidProjectConfigError as exc:
             raise TulonaInvalidProjectConfigError(exc)
 
@@ -57,6 +57,6 @@ class Project:
 
         log.debug(f"Project config is successfully loaded from {project_file_uri}")
 
-        self.validate_project_config(project_dict_raw)
+        final_project_dict = self.validate_project_config(project_dict_raw)
 
-        return project_dict_raw
+        return final_project_dict
