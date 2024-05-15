@@ -25,3 +25,9 @@ composite = click.option(
     help="Used with compare-column task to indicate if all columns are to be combined"
     "for comparison. For example, ds1:column1-column2 vs ds2:column1-column2",
 )
+
+case_insensitive = click.option(
+    "--case-insensitive",
+    is_flag=True,
+    help="If row and/or column comparison are case insensitive or not",
+)

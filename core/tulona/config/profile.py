@@ -36,7 +36,7 @@ class Profile:
                         f"Connection profile {prof} doesn't 'type' specified"
                     )
 
-    def load_profile_config(self) -> Dict | None:
+    def load_profile_config(self) -> Dict:
         profile_file_uri = self.profile_conf_path
         log.debug(f"Attempting to load profile config from {profile_file_uri}")
 

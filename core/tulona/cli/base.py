@@ -99,6 +99,7 @@ def ping(ctx, **kwargs):
 @p.compare
 @p.sample_count
 @p.composite
+@p.case_insensitive
 def scan(ctx, **kwargs):
     """Scan data sources to collect metadata"""
     scan_tasks = []
@@ -113,6 +114,8 @@ def scan(ctx, **kwargs):
             task_config["sample_count"] = kwargs["sample_count"]
         if kwargs["composite"]:
             task_config["composite"] = kwargs["composite"]
+        if kwargs["case_insensitive"]:
+            task_config["case_insensitive"] = kwargs["case_insensitive"]
         scan_tasks.append(task_config)
     else:
         scan_tasks = [t for t in ctx.obj["project"]["task_config"] if t["task"] == "scan"]
@@ -139,6 +142,9 @@ def scan(ctx, **kwargs):
             compare=tconf["compare"] if "compare" in tconf else None,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
             composite=tconf["composite"] if "composite" in tconf else None,
+            case_insensitive=(
+                tconf["case_insensitive"] if "case_insensitive" in tconf else False
+            ),
         ).execute()
 
 
@@ -194,6 +200,7 @@ def profile(ctx, **kwargs):
 # @p.exec_engine
 @p.datasources
 @p.sample_count
+@p.case_insensitive
 def compare_row(ctx, **kwargs):
     """Compares rows from two data entities"""
     compare_row_tasks = []
@@ -204,6 +211,8 @@ def compare_row(ctx, **kwargs):
         }
         if kwargs["sample_count"]:
             task_config["sample_count"] = kwargs["sample_count"]
+        if kwargs["case_insensitive"]:
+            task_config["case_insensitive"] = kwargs["case_insensitive"]
         compare_row_tasks.append(task_config)
     else:
         compare_row_tasks = [
@@ -231,6 +240,9 @@ def compare_row(ctx, **kwargs):
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+            case_insensitive=(
+                tconf["case_insensitive"] if "case_insensitive" in tconf else False
+            ),
         ).execute()
 
 
@@ -240,6 +252,7 @@ def compare_row(ctx, **kwargs):
 # @p.exec_engine
 @p.datasources
 @p.composite
+@p.case_insensitive
 def compare_column(ctx, **kwargs):
     """
     Column name must be specified for task: compare-column
@@ -255,6 +268,8 @@ def compare_column(ctx, **kwargs):
         }
         if kwargs["composite"]:
             task_config["composite"] = kwargs["composite"]
+        if kwargs["case_insensitive"]:
+            task_config["case_insensitive"] = kwargs["case_insensitive"]
         compare_column_tasks.append(task_config)
     else:
         compare_column_tasks = [
@@ -282,6 +297,9 @@ def compare_column(ctx, **kwargs):
             datasources=tconf["datasources"],
             outfile_fqn=outfile_fqn,
             composite=tconf["composite"] if "composite" in tconf else None,
+            case_insensitive=(
+                tconf["case_insensitive"] if "case_insensitive" in tconf else False
+            ),
         ).execute()
 
 
@@ -292,6 +310,7 @@ def compare_column(ctx, **kwargs):
 @p.datasources
 @p.sample_count
 @p.composite
+@p.case_insensitive
 def compare(ctx, **kwargs):
     """
     Compare everything(profiles, rows and columns) for the given datasoures
@@ -306,6 +325,8 @@ def compare(ctx, **kwargs):
             task_config["sample_count"] = kwargs["sample_count"]
         if kwargs["composite"]:
             task_config["composite"] = kwargs["composite"]
+        if kwargs["case_insensitive"]:
+            task_config["case_insensitive"] = kwargs["case_insensitive"]
         compare_tasks.append(task_config)
     else:
         compare_tasks = [
@@ -334,6 +355,9 @@ def compare(ctx, **kwargs):
             outfile_fqn=outfile_fqn,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
             composite=tconf["composite"] if "composite" in tconf else None,
+            case_insensitive=(
+                tconf["case_insensitive"] if "case_insensitive" in tconf else False
+            ),
         ).execute()
 
 
@@ -409,6 +433,9 @@ def run(ctx, **kwargs):
                 datasources=tconf["datasources"],
                 outfile_fqn=outfile_fqn,
                 sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
+                case_insensitive=(
+                    tconf["case_insensitive"] if "case_insensitive" in tconf else False
+                ),
             ).execute()
         except Exception:
             log.error(f"Row comparison failed with error: {traceback.format_exc()}")
@@ -429,6 +456,9 @@ def run(ctx, **kwargs):
                 datasources=tconf["datasources"],
                 outfile_fqn=outfile_fqn,
                 composite=tconf["composite"] if "composite" in tconf else None,
+                case_insensitive=(
+                    tconf["case_insensitive"] if "case_insensitive" in tconf else False
+                ),
             ).execute()
         except Exception:
             log.error(f"Column comparison failed with errorr: {traceback.format_exc()}")
@@ -449,6 +479,9 @@ def run(ctx, **kwargs):
             outfile_fqn=outfile_fqn,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
             composite=tconf["composite"] if "composite" in tconf else None,
+            case_insensitive=(
+                tconf["case_insensitive"] if "case_insensitive" in tconf else False
+            ),
         ).execute()
 
     # ScanTask
@@ -467,6 +500,9 @@ def run(ctx, **kwargs):
             compare=tconf["compare"] if "compare" in tconf else None,
             sample_count=tconf["sample_count"] if "sample_count" in tconf else None,
             composite=tconf["composite"] if "composite" in tconf else None,
+            case_insensitive=(
+                tconf["case_insensitive"] if "case_insensitive" in tconf else False
+            ),
         ).execute()
 
 

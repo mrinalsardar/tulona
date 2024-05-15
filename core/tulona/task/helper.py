@@ -81,6 +81,7 @@ def perform_comparison(
     suffixes: Tuple[str] = ("_x", "_y"),
     indicator: Union[bool, str] = False,
     validate: Optional[str] = None,
+    case_insensitive: bool = False,
 ) -> pd.DataFrame:
     on = [on] if isinstance(on, str) else on
     primary_key = [k.lower() for k in on]
@@ -100,9 +101,10 @@ def perform_comparison(
                 for c in df.columns
             }
         )
-        for k in primary_key:
-            if pd.api.types.is_string_dtype(df[k]):
-                df[k] = df[k].str.lower()
+        if case_insensitive:
+            for k in primary_key:
+                if pd.api.types.is_string_dtype(df[k]):
+                    df[k] = df[k].str.lower()
         dataframes_final.append(df)
 
     df_merge = dataframes_final[0]

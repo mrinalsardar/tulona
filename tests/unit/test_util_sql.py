@@ -129,7 +129,7 @@ def test_build_filter_query_expression(df, primary_key, expected):
             "schema",
             "table",
             """
-        select * from information_schema.columns
+        select * from database.information_schema.columns
         where upper(table_catalog) = 'DATABASE'
         and upper(table_schema) = 'SCHEMA'
         and upper(table_name) = 'TABLE'
