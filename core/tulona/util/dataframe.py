@@ -32,3 +32,16 @@ def apply_column_exclusion(
     if len(exclude_columns):
         df = df.drop(columns=exclude_columns)
     return df
+
+
+def get_sample_rows_for_each_value(
+    df: pd.DataFrame,
+    n_per_value: int,
+    column_name: str,
+) -> pd.DataFrame:
+    df_list = []
+    for uv in df[column_name].unique():
+        df_uv = df[df[column_name] == uv]
+        df_list.append(df_uv.sample(n=min(df_uv.shape[0], n_per_value)))
+    sample_df = pd.concat(df_list, axis=0)
+    return sample_df

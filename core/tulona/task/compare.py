@@ -19,7 +19,7 @@ from tulona.task.base import BaseTask
 from tulona.task.helper import perform_comparison
 from tulona.task.profile import ProfileTask
 from tulona.util.database import get_table_primary_keys
-from tulona.util.dataframe import apply_column_exclusion
+from tulona.util.dataframe import apply_column_exclusion, get_sample_rows_for_each_value
 from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
@@ -520,6 +520,18 @@ class CompareColumnTask(BaseTask):
         log.debug(f"Writing output into: {self.outfile_fqn}")
         _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         for sheet, df in output_dataframes.items():
+            if df.shape[0] > 1000:
+                csv_file = str(self.outfile_fqn).replace(".xlsx", ".csv")
+                log.warning(
+                    f"The dataframe for {sheet} has {df.shape[0]} rows."
+                    " Writing 100 sample rows per unique value from"
+                    " `presence` column into Excel file"
+                    f" and all rows into csv file: {csv_file}"
+                )
+                df.to_csv(csv_file, index=False)
+                df = get_sample_rows_for_each_value(
+                    df=df, n_per_value=100, column_name="presence"
+                )
             with pd.ExcelWriter(
                 path=self.outfile_fqn,
                 mode="a" if os.path.exists(self.outfile_fqn) else "w",
