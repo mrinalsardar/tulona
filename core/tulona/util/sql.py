@@ -1,11 +1,11 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
 from tulona.exceptions import TulonaNotImplementedError
 
 
-def get_table_fqn(database: Union[str, None], schema: str, table: str) -> str:
+def get_table_fqn(database: Optional[str], schema: str, table: str) -> str:
     table_fqn = f"{database + '.' if database else ''}{schema}.{table}"
     return table_fqn
 
@@ -74,7 +74,7 @@ def build_filter_query_expression(
 def get_metadata_query(database, schema, table):
     if database:
         query = f"""
-        select * from information_schema.columns
+        select * from {database}.information_schema.columns
         where upper(table_catalog) = '{database.upper()}'
         and upper(table_schema) = '{schema.upper()}'
         and upper(table_name) = '{table.upper()}'
@@ -181,7 +181,9 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
     return query
 
 
-def get_table_data_query(dbtype, table_fqn, sample_count, query_expr: str = None):
+def get_table_data_query(
+    dbtype, table_fqn, sample_count, query_expr: Optional[str] = None
+):
     if query_expr:
         query = f"select * from {table_fqn} where {query_expr}"
     else:

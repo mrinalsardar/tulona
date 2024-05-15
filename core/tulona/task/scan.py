@@ -21,6 +21,7 @@ DEFAULT_VALUES = {
     "compare_scans": False,
     "sample_count": 20,
     "compare_column_composite": False,
+    "case_insensitive": False,
 }
 META_EXCLUSION = {
     "schemas": ["INFORMATION_SCHEMA", "PERFORMANCE_SCHEMA"],
@@ -36,6 +37,7 @@ class ScanTask(BaseTask):
     compare: bool = DEFAULT_VALUES["compare_scans"]
     sample_count: int = DEFAULT_VALUES["sample_count"]
     composite: bool = DEFAULT_VALUES["compare_column_composite"]
+    case_insensitive: bool = DEFAULT_VALUES["case_insensitive"]
 
     def execute(self):
         log.info(f"Starting task: scan{' --compare' if self.compare else ''}")
@@ -374,6 +376,7 @@ class ScanTask(BaseTask):
                         outfile_fqn=table_outfile_fqn,
                         sample_count=self.sample_count,
                         composite=self.composite,
+                        case_insensitive=self.case_insensitive,
                     ).execute()
 
         exec_time = time.time() - start_time

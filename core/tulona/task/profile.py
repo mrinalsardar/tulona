@@ -91,7 +91,10 @@ class ProfileTask(BaseTask):
         if self.compare:
             log.debug("Preparing metadata comparison")
             df_merge = perform_comparison(
-                ds_name_compressed_list, df_collection, "column_name"
+                ds_name_compressed_list,
+                df_collection,
+                "column_name",
+                case_insensitive=True,
             )
             log.debug(f"Calculated comparison for {df_merge.shape[0]} columns")
 

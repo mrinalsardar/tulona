@@ -6,7 +6,7 @@ import traceback
 from copy import deepcopy
 from dataclasses import _MISSING_TYPE, dataclass, fields
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import pandas as pd
 
@@ -36,6 +36,7 @@ log = logging.getLogger(__name__)
 DEFAULT_VALUES = {
     "sample_count": 20,
     "compare_column_composite": False,
+    "case_insensitive": False,
 }
 
 
@@ -44,8 +45,9 @@ class CompareRowTask(BaseTask):
     profile: Dict
     project: Dict
     datasources: List[str]
-    outfile_fqn: Union[Path, str]
+    outfile_fqn: Path
     sample_count: int = DEFAULT_VALUES["sample_count"]
+    case_insensitive: bool = DEFAULT_VALUES["case_insensitive"]
 
     # Support for default values
     def __post_init__(self):
@@ -217,6 +219,7 @@ class CompareRowTask(BaseTask):
         query_expr = None
 
         log.info(f"Comparing {self.datasources}")
+        df1 = df2 = pd.DataFrame()
         num_try = 1 if "queries" in econf_dict else 5
         i = 0
         while i < num_try:
@@ -336,7 +339,7 @@ class CompareRowTask(BaseTask):
                     df2, primary_key, exclude_columns2, econf_dict["ds_names"][1]
                 )
 
-            if df2.shape[0] > 0:
+            if not df2.empty:
                 for k in primary_key:
                     k = k.lower()
                     df1 = df1[df1[k].isin(df2[k].tolist())]
@@ -349,7 +352,7 @@ class CompareRowTask(BaseTask):
 
             i += 1
 
-        if df2.shape[0] == 0:
+        if df2.empty:
             raise ValueError(
                 f"Could not find common rows between {table_fqn1} and {table_fqn2}"
             )
@@ -361,6 +364,7 @@ class CompareRowTask(BaseTask):
             ds_compressed_names=econf_dict["ds_name_compressed_list"],
             dataframes=row_data_list,
             on=primary_key,
+            case_insensitive=self.case_insensitive,
         )
         log.debug(f"Prepared comparison for {df_row_comp.shape[0]} rows")
 
@@ -369,7 +373,7 @@ class CompareRowTask(BaseTask):
         # Moving key columns to the beginning
         primary_key_lower = [k.lower() for k in primary_key]
         new_columns = primary_key_lower + [
-            col.lower() for col in df_row_comp if col not in primary_key_lower
+            col.lower() for col in df_row_comp.columns if col not in primary_key_lower
         ]
         df_row_comp = df_row_comp[new_columns]
 
@@ -396,8 +400,9 @@ class CompareColumnTask(BaseTask):
     profile: Dict
     project: Dict
     datasources: List[str]
-    outfile_fqn: Union[Path, str]
+    outfile_fqn: Path
     composite: bool = DEFAULT_VALUES["compare_column_composite"]
+    case_insensitive: bool = DEFAULT_VALUES["case_insensitive"]
 
     def execute(self):
         log.info("------------------------ Starting task: compare-column")
@@ -506,6 +511,7 @@ class CompareColumnTask(BaseTask):
                 how="outer",
                 indicator="presence",
                 validate="one_to_one",
+                case_insensitive=self.case_insensitive,
             )
             df_comp = df_comp[df_comp["presence"] != "both"]
             df_comp["presence"] = df_comp["presence"].map(
@@ -544,7 +550,8 @@ class CompareColumnTask(BaseTask):
         _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         for sheet, df in output_dataframes.items():
             with pd.ExcelWriter(
-                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+                path=self.outfile_fqn,
+                mode="a" if os.path.exists(self.outfile_fqn) else "w",
             ) as writer:
                 df.to_excel(
                     writer, sheet_name=f"Column Comparison-> {sheet}", index=False
@@ -559,9 +566,10 @@ class CompareTask(BaseTask):
     profile: Dict
     project: Dict
     datasources: List[str]
-    outfile_fqn: Union[Path, str]
+    outfile_fqn: Path
     sample_count: int = DEFAULT_VALUES["sample_count"]
     composite: bool = DEFAULT_VALUES["compare_column_composite"]
+    case_insensitive: bool = DEFAULT_VALUES["case_insensitive"]
 
     # Support for default values
     def __post_init__(self):
@@ -597,6 +605,7 @@ class CompareTask(BaseTask):
             datasources=self.datasources,
             outfile_fqn=self.outfile_fqn,
             sample_count=self.sample_count,
+            case_insensitive=self.case_insensitive,
         )
         try:
             primary_key = cdt.extract_confs()["primary_key"]
@@ -616,6 +625,7 @@ class CompareTask(BaseTask):
                 datasources=self.datasources,
                 outfile_fqn=self.outfile_fqn,
                 composite=self.composite,
+                case_insensitive=self.case_insensitive,
             ).execute()
         except Exception:
             log.error(f"Column comparison failed with error: {traceback.format_exc()}")
