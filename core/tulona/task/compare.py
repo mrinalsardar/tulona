@@ -19,7 +19,7 @@ from tulona.task.base import BaseTask
 from tulona.task.helper import perform_comparison
 from tulona.task.profile import ProfileTask
 from tulona.util.database import get_table_primary_keys
-from tulona.util.dataframe import apply_column_exclusion
+from tulona.util.dataframe import apply_column_exclusion, get_sample_rows_for_each_value
 from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
@@ -86,28 +86,10 @@ class CompareRowTask(BaseTask):
             ]["type"]
             econf_dict["dbtypes"].append(dbtype)
 
-            if "query" in ds_config and "table" in ds_config:
-                raise AttributeError(
-                    "Both 'query' and 'table' cannot be specified in datasource config"
-                )
-
             if "query" in ds_config:
                 econf_dict["queries"].append(ds_config["query"])
-                if "schema" in ds_config:
-                    log.warning(
-                        "Attribute 'schema' doesn't have any effect"
-                        " with attribute 'query'"
-                    )
-                if "table_fqns" in econf_dict:
-                    if len(econf_dict["table_fqns"]) > 0:
-                        raise AttributeError(
-                            "Same attribute from 'query' and 'table' has to be"
-                            " specified in all candidate datasource confgis"
-                        )
-                    else:
-                        econf_dict.pop("table_fqns")
 
-            elif "table" in ds_config:
+            if "table" in ds_config:
                 # MySQL doesn't have logical database
                 if "database" in ds_config and dbtype.lower() != "mysql":
                     database = ds_config["database"]
@@ -123,17 +105,9 @@ class CompareRowTask(BaseTask):
                 )
 
                 econf_dict["table_fqns"].append(table_fqn)
-                if "queries" in econf_dict:
-                    if len(econf_dict["queries"]) > 0:
-                        raise AttributeError(
-                            "Same attribute from 'query' and 'table' has to be"
-                            " specified in all candidate datasource confgis"
-                        )
-                    else:
-                        econf_dict.pop("queries")
-            else:
+            if "query" not in ds_config and "table" not in ds_config:
                 raise TulonaMissingPropertyError(
-                    "Either 'table' for 'query' must be specified"
+                    "Either 'table' or 'query' must be specified"
                     "in datasource config for row comparison."
                 )
 
@@ -204,7 +178,7 @@ class CompareRowTask(BaseTask):
         # Config extraction
         econf_dict = self.extract_confs()
         dbtype1, dbtype2 = econf_dict["dbtypes"]
-        if "table_fqns" in econf_dict:
+        if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
             table_fqn1, table_fqn2 = econf_dict["table_fqns"]
             log.debug(f"Sample count: {self.sample_count}")
         else:
@@ -225,7 +199,7 @@ class CompareRowTask(BaseTask):
         while i < num_try:
             log.debug(f"Extraction iteration: {i + 1}/{num_try}")
 
-            if "table_fqns" in econf_dict:
+            if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
                 query1 = get_table_data_query(
                     dbtype1, table_fqn1, self.sample_count, query_expr
                 )
@@ -257,9 +231,10 @@ class CompareRowTask(BaseTask):
                         " please try to execute it in the database platform first."
                         f" Query: {query1}"
                     )
-                query1 = get_table_data_query(
-                    dbtype1, table_fqn1, self.sample_count, query_expr
-                )
+                if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
+                    query1 = get_table_data_query(
+                        dbtype1, table_fqn1, self.sample_count, query_expr
+                    )
                 sanitized_query1 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query1)
                 log.debug(f"Executing query: {sanitized_query1}")
                 df1 = get_query_output_as_df(
@@ -285,7 +260,7 @@ class CompareRowTask(BaseTask):
                 df1 = apply_column_exclusion(
                     df1, primary_key, exclude_columns1, econf_dict["ds_names"][0]
                 )
-            if "table_fqns" in econf_dict:
+            if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
                 query2 = get_table_data_query(
                     dbtype2,
                     table_fqn2,
@@ -439,10 +414,6 @@ class CompareColumnTask(BaseTask):
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
-            if "query" in ds_config and "table" in ds_config:
-                raise AttributeError(
-                    "Both 'query' and 'table' cannot be specified in datasource config"
-                )
             if "query" in ds_config:
                 query = ds_config["query"]
                 log.debug(f"Executing query: {query}")
@@ -476,12 +447,12 @@ class CompareColumnTask(BaseTask):
                     )
             else:
                 raise TulonaMissingPropertyError(
-                    "Either 'table' for 'query' must be specified"
+                    "Either 'table' or 'query' must be specified"
                     "in datasource config for row comparison."
                 )
 
             if df.shape[0] == 0:
-                raise ValueError("Query didn't result into any data")
+                raise ValueError("Query didn't find any data")
 
             log.debug(f"Extracted {df.shape[0]} records as query result")
 
@@ -549,6 +520,18 @@ class CompareColumnTask(BaseTask):
         log.debug(f"Writing output into: {self.outfile_fqn}")
         _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         for sheet, df in output_dataframes.items():
+            if df.shape[0] > 1000:
+                csv_file = str(self.outfile_fqn).replace(".xlsx", ".csv")
+                log.warning(
+                    f"The dataframe for {sheet} has {df.shape[0]} rows."
+                    " Writing 100 sample rows per unique value from"
+                    " `presence` column into Excel file"
+                    f" and all rows into csv file: {csv_file}"
+                )
+                df.to_csv(csv_file, index=False)
+                df = get_sample_rows_for_each_value(
+                    df=df, n_per_value=100, column_name="presence"
+                )
             with pd.ExcelWriter(
                 path=self.outfile_fqn,
                 mode="a" if os.path.exists(self.outfile_fqn) else "w",
