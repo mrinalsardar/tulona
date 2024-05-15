@@ -178,7 +178,7 @@ class CompareRowTask(BaseTask):
         # Config extraction
         econf_dict = self.extract_confs()
         dbtype1, dbtype2 = econf_dict["dbtypes"]
-        if "table_fqns" in econf_dict and len(econf_dict["table_fqn"]) > 0:
+        if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
             table_fqn1, table_fqn2 = econf_dict["table_fqns"]
             log.debug(f"Sample count: {self.sample_count}")
         else:
@@ -199,7 +199,7 @@ class CompareRowTask(BaseTask):
         while i < num_try:
             log.debug(f"Extraction iteration: {i + 1}/{num_try}")
 
-            if "table_fqns" in econf_dict and len(econf_dict["table_fqn"]) > 0:
+            if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
                 query1 = get_table_data_query(
                     dbtype1, table_fqn1, self.sample_count, query_expr
                 )
@@ -231,7 +231,7 @@ class CompareRowTask(BaseTask):
                         " please try to execute it in the database platform first."
                         f" Query: {query1}"
                     )
-                if "table_fqns" in econf_dict and len(econf_dict["table_fqn"]) > 0:
+                if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
                     query1 = get_table_data_query(
                         dbtype1, table_fqn1, self.sample_count, query_expr
                     )
@@ -260,7 +260,7 @@ class CompareRowTask(BaseTask):
                 df1 = apply_column_exclusion(
                     df1, primary_key, exclude_columns1, econf_dict["ds_names"][0]
                 )
-            if "table_fqns" in econf_dict and len(econf_dict["table_fqn"]) > 0:
+            if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
                 query2 = get_table_data_query(
                     dbtype2,
                     table_fqn2,
