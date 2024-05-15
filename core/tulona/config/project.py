@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -30,7 +30,7 @@ class Project:
         return Path().absolute()
 
     @property
-    def project_conf_path(self) -> Path | str:
+    def project_conf_path(self) -> Union[Path, str]:
         return Path(self.get_project_root, PROJECT_FILE_NAME)
 
     def validate_project_config(self, project_dict_raw: Dict) -> Dict:

@@ -21,7 +21,7 @@ class Profile:
     def profile_conf_path(self) -> str:
         return Path(self.get_profile_root, PROFILE_FILE_NAME)
 
-    def validate_profile_config(self, profile_dict_raw: dict) -> bool | None:
+    def validate_profile_config(self, profile_dict_raw: dict) -> None:
         for proj in profile_dict_raw:
             proj_dict = profile_dict_raw[proj]
             if "profiles" not in proj_dict:
