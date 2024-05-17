@@ -11,6 +11,7 @@ from typing import Dict, List
 import pandas as pd
 
 from tulona.exceptions import (
+    TulonaInvalidConfigError,
     TulonaMissingPrimaryKeyError,
     TulonaMissingPropertyError,
     TulonaUnsupportedQueryError,
@@ -60,10 +61,39 @@ class CompareRowTask(BaseTask):
                 setattr(self, field.name, field.default)
 
     def extract_confs(self):
+        def validate_conjunct_configs(econf_dict: Dict):
+            if len(econf_dict["queries"]) > 0 and len(econf_dict["queries"]) != len(
+                self.datasources
+            ):
+                raise TulonaInvalidConfigError(
+                    "If `query` is used for a datasource, it must be used"
+                    " for all datasources."
+                )
+            if len(econf_dict["queries"]) == 0 and len(econf_dict["table_fqns"]) != len(
+                self.datasources
+            ):
+                raise TulonaInvalidConfigError(
+                    "If `query` is not used, `table` must be used" " for all datasources."
+                )
+
+            # Validate primary key
+            if (
+                len(
+                    {
+                        tuple(map(lambda x: x.lower(), k))
+                        for k in econf_dict["primary_keys"]
+                    }
+                )
+                > 1
+            ):
+                raise ValueError(
+                    "Primary key must be same in all candidate tables for comparison"
+                )
+
         # TODO: Add support for different names of primary keys in different tables
         # Check if primary key[s] is[are] specified for row comparison
         econf_dict = {}
-        primary_keys = []
+        econf_dict["primary_keys"] = []
         econf_dict["ds_names"] = []
         econf_dict["ds_name_compressed_list"] = []
         econf_dict["ds_configs"] = []
@@ -98,18 +128,8 @@ class CompareRowTask(BaseTask):
                 schema = ds_config["schema"]
                 table = ds_config["table"]
 
-                table_fqn = get_table_fqn(
-                    database,
-                    schema,
-                    table,
-                )
-
+                table_fqn = get_table_fqn(database, schema, table)
                 econf_dict["table_fqns"].append(table_fqn)
-            if "query" not in ds_config and "table" not in ds_config:
-                raise TulonaMissingPropertyError(
-                    "Either 'table' or 'query' must be specified"
-                    "in datasource config for row comparison."
-                )
 
             exclude_columns = (
                 ds_config["exclude_columns"] if "exclude_columns" in ds_config else []
@@ -132,39 +152,26 @@ class CompareRowTask(BaseTask):
                 log.debug(f"Provided primary key for datasource {ds_name}: {ds_pk}")
             else:
                 log.debug(
-                    f"Primary key not provided for datasource {ds_name}"
+                    f"Primary key not provided for datasource {ds_name}."
                     " Tulona will try to extract it from table metadata"
                 )
                 ds_pk = tuple(get_table_primary_keys(conman.engine, schema, table))
-                log.debug(f"Extracted primary key for datasource {ds_name}: {ds_pk}")
+                if not ds_pk:
+                    raise TulonaMissingPrimaryKeyError(
+                        "Primary key[s] is[are] not available"
+                        f" for {table_fqn}[{ds_name}]. Abort!"
+                    )
+                else:
+                    log.debug(f"Extracted primary key for datasource {ds_name}: {ds_pk}")
 
-            if len(ds_pk) > 0:
-                primary_keys.append(ds_pk)
+            if ds_pk:
+                econf_dict["primary_keys"].append(ds_pk)
 
-        pk_ci_set = {tuple(map(lambda x: x.lower(), k)) for k in primary_keys}
+        # Validate the config counterparts
+        validate_conjunct_configs(econf_dict)
 
-        if len(primary_keys) == 0:
-            raise TulonaMissingPrimaryKeyError(
-                "Primary key[s] is[are] not available. Abort!"
-            )
-        elif len(primary_keys) > 0:
-            if len(primary_keys) != len(primary_keys):
-                raise TulonaMissingPrimaryKeyError(
-                    "If primary key is provided, it must be provided for all datasources"
-                )
-
-            if len(pk_ci_set) > 1:
-                raise ValueError(
-                    "Primary key must be same in all candidate tables for comparison"
-                )
-            econf_dict["primary_key"] = primary_keys[0]
-            log.debug(f"Final primary key: {econf_dict['primary_key']}")
-        else:
-            raise TulonaMissingPrimaryKeyError(
-                f"Primary key for {table_fqn}[{ds_name}] could not be found."
-                " Row comparison without primary key has not been implemented yet."
-                " Abort!"
-            )
+        econf_dict["primary_key"] = econf_dict["primary_keys"][0]
+        log.debug(f"Final primary key: {econf_dict['primary_key']}")
 
         return econf_dict
 
@@ -174,17 +181,22 @@ class CompareRowTask(BaseTask):
 
         if len(self.datasources) != 2:
             raise ValueError("Data comparison needs two data sources.")
+        log.info(f"Comparing {self.datasources}")
 
         # Config extraction
         econf_dict = self.extract_confs()
         dbtype1, dbtype2 = econf_dict["dbtypes"]
-        if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
-            table_fqn1, table_fqn2 = econf_dict["table_fqns"]
-            log.debug(f"Sample count: {self.sample_count}")
-        else:
-            query1, query2 = econf_dict["queries"]
         exclude_columns1, exclude_columns2 = econf_dict["exclude_columns_lol"]
         conman1, conman2 = econf_dict["connection_managers"]
+
+        if len(econf_dict["queries"]) > 0:
+            data_container1 = "(" + econf_dict["queries"][0] + ") t"
+            data_container2 = "(" + econf_dict["queries"][1] + ") t"
+        else:
+            table_fqn1, table_fqn2 = econf_dict["table_fqns"]
+            data_container1 = table_fqn1
+            data_container2 = table_fqn2
+            log.debug(f"Sample count: {self.sample_count}")
 
         # TODO: push column exclusion down to the database/query
         # TODO: We probably don't need to create pk tuple out of pk
@@ -192,17 +204,18 @@ class CompareRowTask(BaseTask):
         primary_key = tuple([k for k in econf_dict["primary_key"]])
         query_expr = None
 
-        log.info(f"Comparing {self.datasources}")
         df1 = df2 = pd.DataFrame()
-        num_try = 1 if "queries" in econf_dict else 5
+        num_try = 5
         i = 0
         while i < num_try:
             log.debug(f"Extraction iteration: {i + 1}/{num_try}")
 
-            if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
-                query1 = get_table_data_query(
-                    dbtype1, table_fqn1, self.sample_count, query_expr
-                )
+            query1 = get_table_data_query(
+                dbtype=dbtype1,
+                data_container=data_container1,
+                sample_count=self.sample_count,
+                query_expr=query_expr,
+            )
 
             sanitized_query1 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query1)
             log.debug(f"Executing query: {sanitized_query1}")
@@ -213,15 +226,17 @@ class CompareRowTask(BaseTask):
                 )
             except Exception as exc:
                 log.warning(f"Previous query failed with error: {exc}")
-                if "table_fqns" not in econf_dict:
+                if len(econf_dict["queries"]) > 0:
                     raise TulonaUnsupportedQueryError(
                         "The provided query is unsupported!"
                         " Please try to execute it in the database platform first."
+                        f" Query: {econf_dict['queries'][0]}"
                     )
-                log.debug(
-                    "Trying query with quoted column names for the filter expression"
-                )
+
                 if query_expr and i > 0:
+                    log.debug(
+                        "Trying query with quoted column names for the filter expression"
+                    )
                     query_expr = build_filter_query_expression(
                         df1, primary_key, quoted=True, positive=False
                     )
@@ -231,25 +246,14 @@ class CompareRowTask(BaseTask):
                         " please try to execute it in the database platform first."
                         f" Query: {query1}"
                     )
-                if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
-                    query1 = get_table_data_query(
-                        dbtype1, table_fqn1, self.sample_count, query_expr
-                    )
-                sanitized_query1 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query1)
-                log.debug(f"Executing query: {sanitized_query1}")
-                df1 = get_query_output_as_df(
-                    connection_manager=conman1, query_text=query1
-                )
 
-            if df1.shape[0] == 0:
-                log.warning(f"Couldn't extract rows from {table_fqn1}")
-                i += 1
-                continue
+            if df1.empty:
+                raise ValueError(f"Couldn't extract rows from {data_container1}")
 
             df1 = df1.rename(columns={c: c.lower() for c in df1.columns})
             for k in primary_key:
                 if k.lower() not in df1.columns.tolist():
-                    raise ValueError(f"Primary key {k} not present in {table_fqn1}")
+                    raise ValueError(f"Primary key {k} not present in {data_container1}")
 
             # Exclude columns
             if len(exclude_columns1) > 0:
@@ -260,13 +264,13 @@ class CompareRowTask(BaseTask):
                 df1 = apply_column_exclusion(
                     df1, primary_key, exclude_columns1, econf_dict["ds_names"][0]
                 )
-            if "table_fqns" in econf_dict and len(econf_dict["table_fqns"]) > 0:
-                query2 = get_table_data_query(
-                    dbtype2,
-                    table_fqn2,
-                    self.sample_count,
-                    query_expr=build_filter_query_expression(df1, primary_key),
-                )
+
+            query2 = get_table_data_query(
+                dbtype=dbtype2,
+                data_container=data_container2,
+                sample_count=self.sample_count,
+                query_expr=build_filter_query_expression(df1, primary_key),
+            )
             sanitized_query2 = re.sub(r"where(.*)\(.*\)", r"where\g<1>(...)", query2)
             log.debug(f"Executing query: {sanitized_query2}")
 
@@ -276,18 +280,19 @@ class CompareRowTask(BaseTask):
                 )
             except Exception as exc:
                 log.warning(f"Previous query failed with error: {exc}")
-                if "table_fqns" not in econf_dict:
+                if len(econf_dict["queries"]) > 0:
                     raise TulonaUnsupportedQueryError(
                         "The provided query is unsupported!"
                         " Please try to execute it in the database platform first."
+                        f" Query: {econf_dict['queries'][1]}"
                     )
                 log.debug(
                     "Trying query with quoted column names for the filter expression"
                 )
                 query2 = get_table_data_query(
-                    dbtype2,
-                    table_fqn2,
-                    self.sample_count,
+                    dbtype=dbtype2,
+                    data_container=data_container2,
+                    sample_count=self.sample_count,
                     query_expr=build_filter_query_expression(
                         df1, primary_key, quoted=True
                     ),
@@ -329,7 +334,7 @@ class CompareRowTask(BaseTask):
 
         if df2.empty:
             raise ValueError(
-                f"Could not find common rows between {table_fqn1} and {table_fqn2}"
+                f"Could not find common rows between {data_container1} and {data_container2}"
             )
 
         log.debug(

@@ -33,6 +33,13 @@ class TulonaProfileException(Exception):
         super().__init__(self.formatted_message)
 
 
+class TulonaInvalidConfigError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        self.formatted_message = f"ERROR: {self.message}"
+        super().__init__(self.formatted_message)
+
+
 class TulonaInvalidProfileConfigError(Exception):
     def __init__(self, message: str):
         self.message = message

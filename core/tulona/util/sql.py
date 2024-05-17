@@ -10,20 +10,20 @@ def get_table_fqn(database: Optional[str], schema: str, table: str) -> str:
     return table_fqn
 
 
-def get_sample_row_query(dbtype: str, table_name: str, sample_count: int):
+def get_sample_row_query(dbtype: str, data_container: str, sample_count: int):
     dbtype = dbtype.lower()
 
     # TODO: validate sampling mechanism for maximum possible randomness
     if dbtype == "snowflake":
-        query = f"select * from {table_name} tablesample ({sample_count} rows)"
+        query = f"select * from {data_container} tablesample ({sample_count} rows)"
     elif dbtype == "mssql":
-        query = f"select top {sample_count} * from {table_name}"
+        query = f"select top {sample_count} * from {data_container}"
     elif dbtype == "postgres":
         # TODO: system_rows method not implemented, tablesample works for percentage selection
         # query = f"select * from {table_name} tablesample system_rows({sample_count})"
-        query = f"select * from {table_name} limit {sample_count}"
+        query = f"select * from {data_container} limit {sample_count}"
     elif dbtype == "mysql":
-        query = f"select * from {table_name} limit {sample_count}"
+        query = f"select * from {data_container} limit {sample_count}"
     else:
         raise TulonaNotImplementedError(
             f"Extracting sample rows from adapter type {dbtype} is not implemented."
@@ -182,12 +182,12 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
 
 
 def get_table_data_query(
-    dbtype, table_fqn, sample_count, query_expr: Optional[str] = None
+    dbtype, data_container, sample_count, query_expr: Optional[str] = None
 ):
     if query_expr:
-        query = f"select * from {table_fqn} where {query_expr}"
+        query = f"select * from {data_container} where {query_expr}"
     else:
         query = get_sample_row_query(
-            dbtype=dbtype, table_name=table_fqn, sample_count=sample_count
+            dbtype=dbtype, data_container=data_container, sample_count=sample_count
         )
     return query
