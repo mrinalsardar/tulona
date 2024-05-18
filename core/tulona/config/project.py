@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from tulona.exceptions import TulonaInvalidProjectConfigError, TulonaProjectException
 from tulona.util.filesystem import path_exists
-from tulona.util.yaml_parser import read_yaml
+from tulona.util.yaml_parser import read_yaml_file
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class Project:
                 f"Project file {project_file_uri} does not exist."
             )
 
-        project_dict_raw = read_yaml(project_file_uri)
+        project_dict_raw = read_yaml_file(project_file_uri)
 
         if not isinstance(project_dict_raw, dict):
             raise TulonaProjectException(

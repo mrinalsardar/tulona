@@ -4,7 +4,7 @@ from typing import Dict
 
 from tulona.exceptions import TulonaMissingPropertyError, TulonaProfileException
 from tulona.util.filesystem import path_exists
-from tulona.util.yaml_parser import read_yaml
+from tulona.util.yaml_parser import read_yaml_file
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class Profile:
                 f"Profile file {profile_file_uri} does not exist."
             )
 
-        profile_dict_raw = read_yaml(profile_file_uri)
+        profile_dict_raw = read_yaml_file(profile_file_uri)
 
         if not isinstance(profile_dict_raw, dict):
             raise TulonaProfileException(
