@@ -32,7 +32,8 @@ file_handler = logging.FileHandler(log_file_fqn)
 file_handler.setFormatter(log_formatter)
 file_handler.setLevel(logging.DEBUG)
 log.addHandler(file_handler)
-# TODO: Logs of this file are not getting out (-_-)
+
+nlog = logging.getLogger(__name__)
 
 
 # command: tulona
@@ -45,7 +46,7 @@ log.addHandler(file_handler)
 def cli(ctx):
     """Tulona compares data sources to find out differences"""
     logging.getLogger("tulona").setLevel(logging.DEBUG)
-    logging.getLogger(__name__).info(f"Writing debug log into: {log_file_fqn}")
+    nlog.info(f"Writing debug log into: {log_file_fqn}")
 
     prof = Profile()
     proj = Project()
@@ -80,10 +81,10 @@ def ping(ctx, **kwargs):
             "Nothing to execute. Either define tasks in task_config section of the"
             " project config file or pass --datasources argument with values."
         )
-    log.debug(f"Number of ping tasks to execute: {len(ping_tasks)}")
+    nlog.debug(f"Number of ping tasks to execute: {len(ping_tasks)}")
 
     for tconf in ping_tasks:
-        log.debug(f"Executing ping with task profile: {tconf}")
+        nlog.info(f"Executing ping with task profile: {tconf}")
         PingTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
@@ -125,14 +126,15 @@ def scan(ctx, **kwargs):
             "Nothing to execute. Either define tasks in task_config section of the"
             " project config file or pass --datasources argument with values."
         )
-    log.debug(f"Number of scan tasks to execute: {len(scan_tasks)}")
+    nlog.debug(f"Number of scan tasks to execute: {len(scan_tasks)}")
 
     for tconf in scan_tasks:
-        log.debug(f"Executing scan with task profile: {tconf}")
+        nlog.info(f"Executing scan with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         ScanTask(
             profile=ctx.obj["profile"],
@@ -175,15 +177,16 @@ def profile(ctx, **kwargs):
             "Nothing to execute. Either define tasks in task_config section of the"
             " project config file or pass --datasources argument with values."
         )
-    log.debug(f"Number of profile tasks to execute: {len(profile_tasks)}")
+    nlog.debug(f"Number of profile tasks to execute: {len(profile_tasks)}")
 
     for tconf in profile_tasks:
-        log.debug(f"Executing profile with task profile: {tconf}")
+        nlog.info(f"Executing profile with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         ProfileTask(
             profile=ctx.obj["profile"],
@@ -224,15 +227,16 @@ def compare_row(ctx, **kwargs):
             "Nothing to execute. Either define tasks in task_config section of the"
             " project config file or pass --datasources argument with values."
         )
-    log.debug(f"Number compare-row tasks to execute: {len(compare_row_tasks)}")
+    nlog.debug(f"Number compare-row tasks to execute: {len(compare_row_tasks)}")
 
     for tconf in compare_row_tasks:
-        log.debug(f"Executing compare-row with task profile: {tconf}")
+        nlog.info(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareRowTask(
             profile=ctx.obj["profile"],
@@ -281,15 +285,16 @@ def compare_column(ctx, **kwargs):
             "Nothing to execute. Either define tasks in task_config section of the"
             " project config file or pass --datasources argument with values."
         )
-    log.debug(f"Number compare-column tasks to execute: {len(compare_column_tasks)}")
+    nlog.debug(f"Number compare-column tasks to execute: {len(compare_column_tasks)}")
 
     for tconf in compare_column_tasks:
-        log.debug(f"Executing compare-column with task profile: {tconf}")
+        nlog.info(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareColumnTask(
             profile=ctx.obj["profile"],
@@ -338,15 +343,16 @@ def compare(ctx, **kwargs):
             "Nothing to execute. Either define tasks in task_config section of the"
             " project config file or pass --datasources argument with values."
         )
-    log.debug(f"Number compare tasks to execute: {len(compare_tasks)}")
+    nlog.debug(f"Number compare tasks to execute: {len(compare_tasks)}")
 
     for tconf in compare_tasks:
-        log.debug(f"Executing compare with task profile: {tconf}")
+        nlog.info(f"Executing compare with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareTask(
             profile=ctx.obj["profile"],
@@ -390,7 +396,7 @@ def run(ctx, **kwargs):
 
     # PingTask
     for tconf in ping_tasks:
-        log.debug(f"Executing ping with task profile: {tconf}")
+        nlog.info(f"Executing ping with task profile: {tconf}")
         PingTask(
             profile=ctx.obj["profile"],
             project=ctx.obj["project"],
@@ -399,12 +405,13 @@ def run(ctx, **kwargs):
 
     # ProfileTask
     for tconf in profile_tasks:
-        log.debug(f"Executing profile with task profile: {tconf}")
+        nlog.info(f"Executing profile with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         try:
             ProfileTask(
@@ -419,12 +426,13 @@ def run(ctx, **kwargs):
 
     # CompareRowTask
     for tconf in compare_row_tasks:
-        log.debug(f"Executing compare-row with task profile: {tconf}")
+        nlog.info(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         try:
             CompareRowTask(
@@ -442,12 +450,13 @@ def run(ctx, **kwargs):
 
     # CompareColumnTask
     for tconf in compare_column_tasks:
-        log.debug(f"Executing compare-column with task profile: {tconf}")
+        nlog.info(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         try:
             CompareColumnTask(
@@ -465,12 +474,13 @@ def run(ctx, **kwargs):
 
     # CompareTask
     for tconf in compare_tasks:
-        log.debug(f"Executing compare with task profile: {tconf}")
+        nlog.info(f"Executing compare with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
         outfile_fqn = Path(final_outdir, "comparison.xlsx")
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareTask(
             profile=ctx.obj["profile"],
@@ -486,11 +496,12 @@ def run(ctx, **kwargs):
 
     # ScanTask
     for tconf in scan_tasks:
-        log.debug(f"Executing scan with task profile: {tconf}")
+        nlog.info(f"Executing scan with task profile: {tconf}")
         final_outdir = get_task_outdir(
             run_dir=ctx.obj["project"]["run_result_dir"],
             task_conf=tconf,
         )
+        nlog.debug(f"Output will be stored in: {final_outdir}")
 
         ScanTask(
             profile=ctx.obj["profile"],
