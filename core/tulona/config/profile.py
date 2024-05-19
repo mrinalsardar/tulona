@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 from tulona.exceptions import TulonaMissingPropertyError, TulonaProfileException
 from tulona.util.filesystem import path_exists
@@ -18,7 +18,7 @@ class Profile:
         return Path(Path.home(), ".tulona")
 
     @property
-    def profile_conf_path(self) -> str:
+    def profile_conf_path(self) -> Union[str, Path]:
         return Path(self.get_profile_root, PROFILE_FILE_NAME)
 
     def validate_profile_config(self, profile_dict_raw: dict) -> None:
@@ -45,7 +45,7 @@ class Profile:
                 f"Profile file {profile_file_uri} does not exist."
             )
 
-        profile_dict_raw = read_yaml_file(profile_file_uri)
+        profile_dict_raw = read_yaml_file(str(profile_file_uri))
 
         if not isinstance(profile_dict_raw, dict):
             raise TulonaProfileException(

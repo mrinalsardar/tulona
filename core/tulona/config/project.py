@@ -48,7 +48,7 @@ class Project:
                 f"Project file {project_file_uri} does not exist."
             )
 
-        project_dict_raw = read_yaml_file(project_file_uri)
+        project_dict_raw = read_yaml_file(str(project_file_uri))
 
         if not isinstance(project_dict_raw, dict):
             raise TulonaProjectException(
