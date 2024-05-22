@@ -88,7 +88,7 @@ def get_metadata_query(database, schema, table):
     return query
 
 
-def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False):
+def get_metric_query(data_container, columns_dtype: Dict, metrics: list, quoted=False):
     numeric_types = [
         "smallint",
         "integer",
@@ -175,7 +175,7 @@ def get_metric_query(table_fqn, columns_dtype: Dict, metrics: list, quoted=False
     query = f"""
     select
         {", ".join(call_funcs)}
-    from {table_fqn}
+    from {data_container}
     """
 
     return query
