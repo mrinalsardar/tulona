@@ -6,10 +6,9 @@ import traceback
 from copy import deepcopy
 from dataclasses import _MISSING_TYPE, dataclass, fields
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
-
 from tulona.exceptions import (
     TulonaInvalidConfigError,
     TulonaMissingPrimaryKeyError,
@@ -47,7 +46,7 @@ class CompareRowTask(BaseTask):
     project: Dict
     datasources: List[str]
     outfile_fqn: Path
-    sample_count: int = DEFAULT_VALUES["sample_count"]
+    sample_count: Optional[int] = DEFAULT_VALUES["sample_count"]
     case_insensitive: bool = DEFAULT_VALUES["case_insensitive"]
 
     # Support for default values
