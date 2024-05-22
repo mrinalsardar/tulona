@@ -74,7 +74,7 @@ This is how a `tulona-project.yml` file looks like:
   name: integration_project
   config_version: 1
 
-  outdir: output # the folder comparison result is written into
+  outdir: output # optional
 
   # Datasource names must be unique
   datasources:
@@ -85,7 +85,8 @@ This is how a `tulona-project.yml` file looks like:
       table: employee
       primary_key: Employee_ID
       exclude_columns:
-        - name
+        - Email
+        - Name
       compare_column: Employee_ID
     employee_mysql:
       connection_profile: mydb
@@ -93,7 +94,7 @@ This is how a `tulona-project.yml` file looks like:
       table: employee
       primary_key: Employee_ID
       exclude_columns:
-        - phone_number
+        - Phone_Number
       compare_column: Employee_ID
     person_postgres:
       connection_profile: pgdb
@@ -149,6 +150,26 @@ This is how a `tulona-project.yml` file looks like:
       exclude_columns:
         - phone_number
       compare_column: Employee_ID
+    employee_postgres_query_tab:
+      connection_profile: pgdb
+      database: postgresdb
+      schema: corporate
+      table: employee
+      query: select * from postgresdb.corporate.employee
+      primary_key: Employee_ID
+      exclude_columns:
+        - name
+      compare_column: Employee_ID
+    employee_mysql_query_tab:
+      connection_profile: mydb
+      schema: corporate
+      table: employee
+      query: select * from corporate.employee
+      primary_key: Employee_ID
+      exclude_columns:
+        - phone_number
+      compare_column: Employee_ID
+
 
   # List of task configs(Dict)
   # Depending on the accepted params, task config can have different params
@@ -164,12 +185,12 @@ This is how a `tulona-project.yml` file looks like:
       datasources:
         - employee_postgres
         - employee_mysql
+      compare: true
 
     - task: profile
       datasources:
         - person_postgres
         - person_mysql
-      compare: true
 
     - task: compare-row
       datasources:
@@ -238,6 +259,10 @@ This is how a `tulona-project.yml` file looks like:
         - postgresdb_postgres
         - none_mysql
       compare: true
+    - task: compare
+      datasources:
+        - employee_postgres_query_tab
+        - employee_mysql_query_tab
 
 
 Features
@@ -261,7 +286,7 @@ Tulona has following commands available:
 
     ``tulona ping``
 
-* **profile**: To extract and compare metadata of two sources/tables. It includes metadata from `information_schema` related to the tables and some column level metrics (min, max, average, count & distinct_count). Sample commands:
+* **profile**: To extract and compare metadata of two sources/tables. It includes metadata from `information_schema` related to the tables and some column level metrics (min, max, average, count & distinct_count). Note that specifying `database`, `schema` and `table` is required for `profile` to work regardless the use of `query`. Sample commands:
 
   * Profiling without `--compare` flag. It will write metadata and metrics about different sources/tables in different sheets/tabs in the excel file (not a comparison view):
 
