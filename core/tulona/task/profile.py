@@ -9,16 +9,16 @@ import pandas as pd
 
 from tulona.exceptions import TulonaMissingPropertyError
 from tulona.task.base import BaseTask
+from tulona.task.helper import perform_comparison
+from tulona.util.excel import highlight_mismatch_cells
+from tulona.util.filesystem import create_dir_if_not_exist
+from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.sql import (
     get_metadata_query,
     get_metric_query,
     get_query_output_as_df,
     get_table_fqn,
 )
-from tulona.task.helper import perform_comparison
-from tulona.util.excel import highlight_mismatch_cells
-from tulona.util.filesystem import create_dir_if_not_exist
-from tulona.util.profiles import extract_profile_name, get_connection_profile
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,8 @@ class ProfileTask(BaseTask):
         log.info("------------------------ Starting task: profile")
         start_time = time.time()
 
-        df_collection = []
+        meta_frames = []
+        metric_frames = []
         ds_name_compressed_list = []
         for ds_name in self.datasources:
             log.debug(f"Extracting configs for: {ds_name}")
@@ -95,12 +96,19 @@ class ProfileTask(BaseTask):
             log.debug("Extracting metadata")
             meta_query = get_metadata_query(database, schema, table)
             log.debug(f"Executing query: {meta_query}")
-            df_meta = get_query_output_as_df(connection_manager=conman, query_text=meta_query)
+            df_meta = get_query_output_as_df(
+                connection_manager=conman, query_text=meta_query
+            )
             df_meta = df_meta.rename(columns={c: c.lower() for c in df_meta.columns})
+            meta_frames.append(df_meta)
 
             # Extract metrics like min, max, avg, count, distinct count etc.
             log.debug("Extracting metrics")
-            data_container = ("(" + ds_config["query"] + ") t" if "query" in ds_config else get_table_fqn(database, schema, table))
+            data_container = (
+                "(" + ds_config["query"] + ") t"
+                if "query" in ds_config
+                else get_table_fqn(database, schema, table)
+            )
             metrics = list(map(lambda s: s.lower(), metrics))
             type_dict = df_meta[["column_name", "data_type"]].to_dict(orient="list")
             columns_dtype = {
@@ -141,27 +149,32 @@ class ProfileTask(BaseTask):
             df_metric = pd.DataFrame(metric_dict)
 
             # Combine meta and metric data
-            df = pd.merge(left=df_meta, right=df_metric, how="inner", on="column_name")
-            df_collection.append(df)
+            # df = pd.merge(left=df_meta, right=df_metric, how="inner", on="column_name")
+            metric_frames.append(df_metric)
 
         _ = create_dir_if_not_exist(self.outfile_fqn.parent)
         if self.compare:
+            # Metadata comparison
             log.debug("Preparing metadata comparison")
-            df_merge = perform_comparison(
-                ds_name_compressed_list,
-                df_collection,
-                "column_name",
+            df_meta_merge = perform_comparison(
+                ds_compressed_names=ds_name_compressed_list,
+                dataframes=meta_frames,
+                on="column_name",
                 case_insensitive=True,
             )
-            log.debug(f"Calculated comparison for {df_merge.shape[0]} columns")
+            log.debug(
+                f"Calculated metadata comparison for {df_meta_merge.shape[0]} columns"
+            )
 
             log.debug(f"Writing results into file: {self.outfile_fqn}")
-            primary_key_col = df_merge.pop("column_name")
-            df_merge.insert(loc=0, column="column_name", value=primary_key_col)
+            primary_key_col = df_meta_merge.pop("column_name")
+            df_meta_merge.insert(loc=0, column="column_name", value=primary_key_col)
             with pd.ExcelWriter(
                 self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
             ) as writer:
-                df_merge.to_excel(writer, sheet_name="Metadata Comparison", index=False)
+                df_meta_merge.to_excel(
+                    writer, sheet_name="Metadata Comparison", index=False
+                )
 
             log.debug("Highlighting mismtach cells")
             highlight_mismatch_cells(
@@ -170,13 +183,56 @@ class ProfileTask(BaseTask):
                 num_ds=len(ds_name_compressed_list),
                 skip_columns="column_name",
             )
-        else:
+
+            # Metric comparison
+            log.debug("Preparing metric comparison")
+            df_metric_merge = perform_comparison(
+                ds_compressed_names=ds_name_compressed_list,
+                dataframes=metric_frames,
+                on="column_name",
+                case_insensitive=True,
+            )
+            log.debug(
+                f"Calculated metric comparison for {df_metric_merge.shape[0]} columns"
+            )
+
             log.debug(f"Writing results into file: {self.outfile_fqn}")
-            with pd.ExcelWriter(self.outfile_fqn) as writer:
-                for ds_name, df in zip(ds_name_compressed_list, df_collection):
+            primary_key_col = df_metric_merge.pop("column_name")
+            df_metric_merge.insert(loc=0, column="column_name", value=primary_key_col)
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                df_metric_merge.to_excel(
+                    writer, sheet_name="Metric Comparison", index=False
+                )
+
+            log.debug("Highlighting mismtach cells")
+            highlight_mismatch_cells(
+                excel_file=self.outfile_fqn,
+                sheet="Metric Comparison",
+                num_ds=len(ds_name_compressed_list),
+                skip_columns="column_name",
+            )
+        else:
+            # Metadata output
+            log.debug(f"Writing metadata into file: {self.outfile_fqn}")
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                for ds_name, df in zip(ds_name_compressed_list, meta_frames):
                     primary_key_col = df.pop("column_name")
                     df.insert(loc=0, column="column_name", value=primary_key_col)
                     df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
+
+            # Metric output
+            log.debug(f"Writing metric into file: {self.outfile_fqn}")
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                for ds_name, df in zip(ds_name_compressed_list, metric_frames):
+                    primary_key_col = df.pop("column_name")
+                    df.insert(loc=0, column="column_name", value=primary_key_col)
+                    df.to_excel(writer, sheet_name=f"{ds_name} Metric", index=False)
 
         exec_time = time.time() - start_time
         log.info(f"Finished task: profile in {exec_time:.2f} seconds")

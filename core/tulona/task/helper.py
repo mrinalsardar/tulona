@@ -3,14 +3,6 @@ from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 
-from tulona.adapter.connection import ConnectionManager
-from tulona.util.sql import (
-    get_metadata_query,
-    get_metric_query,
-    get_query_output_as_df,
-    get_table_fqn,
-)
-
 log = logging.getLogger(__name__)
 
 

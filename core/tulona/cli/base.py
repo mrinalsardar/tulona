@@ -69,7 +69,7 @@ def ping(ctx, **kwargs):
     ping_tasks = []
     if kwargs["datasources"]:
         task_config = {
-            "task": "compare",
+            "task": "ping",
             "datasources": kwargs["datasources"].split(","),
         }
         ping_tasks.append(task_config)
@@ -106,7 +106,7 @@ def scan(ctx, **kwargs):
     scan_tasks = []
     if kwargs["datasources"]:
         task_config = {
-            "task": "compare",
+            "task": "scan",
             "datasources": kwargs["datasources"].split(","),
         }
         if kwargs["compare"]:
@@ -161,7 +161,7 @@ def profile(ctx, **kwargs):
     profile_tasks = []
     if kwargs["datasources"]:
         task_config = {
-            "task": "compare",
+            "task": "profile",
             "datasources": kwargs["datasources"].split(","),
         }
         if kwargs["compare"]:
@@ -209,7 +209,7 @@ def compare_row(ctx, **kwargs):
     compare_row_tasks = []
     if kwargs["datasources"]:
         task_config = {
-            "task": "compare",
+            "task": "compare-row",
             "datasources": kwargs["datasources"].split(","),
         }
         if kwargs["sample_count"]:
