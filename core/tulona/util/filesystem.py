@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Dict, Union
 
 
 def path_exists(p: Union[str, Path]) -> bool:
@@ -38,7 +38,7 @@ def get_run_result_dir(basedir: str):
 
 
 # TODO: Testable - pull current timestamp from caller
-def get_task_outdir(run_dir: str, task_conf: str):
+def get_task_outdir(run_dir: str, task_conf: Dict):
     task = task_conf["task"].replace("-", "")
     ds_list = [ds.split(":")[0].replace("_", "") for ds in task_conf["datasources"]]
     extra_params = []

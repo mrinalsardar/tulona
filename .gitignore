@@ -5,6 +5,7 @@ tulona-project.yaml
 .DS_Store
 .idea
 .vscode
+.idx
 *.pyc
 output
 .pytest_cache
