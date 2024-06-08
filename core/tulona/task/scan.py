@@ -128,7 +128,7 @@ class ScanTask(BaseTask):
             if not self.compare:
                 # Writing database scan result
                 dbscan_outfile_fqn = Path(
-                    self.final_outdir, f"{database.replace('_', '')}_scan.xlsx"
+                    self.final_outdir, f"scan_db__{database.replace('_', '')}.xlsx"
                 )
                 log.debug(f"Writing db scan result into: {dbscan_outfile_fqn}")
                 dataframes_into_excel(
@@ -165,7 +165,7 @@ class ScanTask(BaseTask):
                     # Writing schema scan result
                     schemascan_outfile_fqn = Path(
                         self.final_outdir,
-                        f"{database.replace('_', '')}_{schema.replace('_', '')}_scan.xlsx",
+                        f"scan_schema__{database.replace('_', '')}_{schema.replace('_', '')}.xlsx",
                     )
                     log.debug(
                         f"Writing schema scan result into: {schemascan_outfile_fqn}"
@@ -228,7 +228,7 @@ class ScanTask(BaseTask):
             # Writing database comparison result
             dbs_compressed = [db.replace("_", "") for db in databases]
             dbcomp_outfile_fqn = Path(
-                self.final_outdir, f"{'_'.join(dbs_compressed)}_comparison.xlsx"
+                self.final_outdir, f"compare_db__{'_'.join(dbs_compressed)}.xlsx"
             )
             log.debug(f"Writing db scan comparison result into: {dbcomp_outfile_fqn}")
             dataframes_into_excel(
@@ -312,7 +312,8 @@ class ScanTask(BaseTask):
 
                 # Writing schema comparison result
                 schemacomp_outfile_fqn = Path(
-                    self.final_outdir, f"{'_'.join(schema_compressed)}_comparison.xlsx"
+                    self.final_outdir,
+                    f"compare_schema__{'_'.join(schema_compressed)}.xlsx",
                 )
                 log.debug(
                     f"Writing schema scan comparison result into: {schemacomp_outfile_fqn}"
@@ -364,7 +365,7 @@ class ScanTask(BaseTask):
                     table_fqns = [f"{sf}_{table}" for sf in schema_compressed]
                     table_outfile_fqn = Path(
                         self.final_outdir,
-                        f"{'_'.join(table_fqns)}_comparison.xlsx",
+                        f"compare_table__{'_'.join(table_fqns)}.xlsx",
                     )
 
                     # Execute CompareTask
