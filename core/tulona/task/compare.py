@@ -104,8 +104,6 @@ class CompareRowTask(BaseTask):
         econf_dict["exclude_columns_lol"] = []
         for ds_name in self.datasources:
             log.debug(f"Extracting configs for: {ds_name}")
-            # Extract data source name from datasource:column combination
-            ds_name = ds_name.split(":")[0]
             econf_dict["ds_names"].append(ds_name)
             econf_dict["ds_name_compressed_list"].append(ds_name.replace("_", ""))
 

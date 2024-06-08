@@ -55,8 +55,6 @@ class ProfileTask(BaseTask):
         ds_name_compressed_list = []
         for ds_name in self.datasources:
             log.debug(f"Extracting configs for: {ds_name}")
-            # Extract data source name from datasource:column combination
-            ds_name = ds_name.split(":")[0]
             ds_name_compressed = ds_name.replace("_", "")
             ds_name_compressed_list.append(ds_name_compressed)
 
