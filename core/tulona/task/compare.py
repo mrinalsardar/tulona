@@ -539,9 +539,7 @@ class CompareColumnTask(BaseTask):
                 path=self.outfile_fqn,
                 mode="a" if os.path.exists(self.outfile_fqn) else "w",
             ) as writer:
-                df.to_excel(
-                    writer, sheet_name=f"Column Comparison-> {sheet}", index=False
-                )
+                df.to_excel(writer, sheet_name=f"Col Comp- {sheet}", index=False)
 
         exec_time = time.time() - start_time
         log.info(f"Finished task: compare-column in {exec_time:.2f} seconds")

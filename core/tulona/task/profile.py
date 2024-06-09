@@ -14,7 +14,7 @@ from tulona.util.excel import highlight_mismatch_cells
 from tulona.util.filesystem import create_dir_if_not_exist
 from tulona.util.profiles import extract_profile_name, get_connection_profile
 from tulona.util.sql import (
-    get_metadata_query,
+    get_information_schema_query,
     get_metric_query,
     get_query_output_as_df,
     get_table_fqn,
@@ -51,6 +51,7 @@ class ProfileTask(BaseTask):
         start_time = time.time()
 
         meta_frames = []
+        table_constraint_frames = []
         metric_frames = []
         ds_name_compressed_list = []
         for ds_name in self.datasources:
@@ -70,10 +71,9 @@ class ProfileTask(BaseTask):
                 )
 
             # MySQL doesn't have logical database
+            database = None
             if "database" in ds_config and dbtype.lower() != "mysql":
                 database = ds_config["database"]
-            else:
-                database = None
             schema = ds_config["schema"]
             table = ds_config["table"]
 
@@ -82,17 +82,9 @@ class ProfileTask(BaseTask):
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             log.info(f"Profiling {ds_name}")
-            metrics = [
-                "min",
-                "max",
-                "avg",
-                "count",
-                "distinct_count",
-            ]
-
             # Extract metadata
             log.debug("Extracting metadata")
-            meta_query = get_metadata_query(database, schema, table)
+            meta_query = get_information_schema_query(database, schema, table, "columns")
             log.debug(f"Executing query: {meta_query}")
             df_meta = get_query_output_as_df(
                 connection_manager=conman, query_text=meta_query
@@ -100,8 +92,36 @@ class ProfileTask(BaseTask):
             df_meta = df_meta.rename(columns={c: c.lower() for c in df_meta.columns})
             meta_frames.append(df_meta)
 
+            # Extract table constraints
+            log.debug("Extracting table constraint info")
+            table_constraint_query = get_information_schema_query(
+                database, schema, table, "table_constraints"
+            )
+            log.debug(f"Executing query: {table_constraint_query}")
+            df_tab_constraint = get_query_output_as_df(
+                connection_manager=conman, query_text=table_constraint_query
+            )
+            df_tab_constraint = df_tab_constraint.rename(
+                columns={c: c.lower() for c in df_tab_constraint.columns}
+            )
+            df_tab_constraint["table_constraint"] = (
+                df_tab_constraint["table_name"]
+                + "|"
+                + df_tab_constraint["constraint_type"]
+            )
+            drop_cols = ["constraint_catalog", "constraint_schema", "constraint_name"]
+            df_tab_constraint.drop(drop_cols, axis=1, inplace=True)
+            table_constraint_frames.append(df_tab_constraint)
+
             # Extract metrics like min, max, avg, count, distinct count etc.
             log.debug("Extracting metrics")
+            metrics = [
+                "min",
+                "max",
+                "avg",
+                "count",
+                "distinct_count",
+            ]
             data_container = (
                 "(" + ds_config["query"] + ") t"
                 if "query" in ds_config
@@ -146,11 +166,9 @@ class ProfileTask(BaseTask):
                     metric_dict[m].append(metric_value)
             df_metric = pd.DataFrame(metric_dict)
 
-            # Combine meta and metric data
-            # df = pd.merge(left=df_meta, right=df_metric, how="inner", on="column_name")
             metric_frames.append(df_metric)
 
-        _ = create_dir_if_not_exist(self.outfile_fqn.parent)
+        _ = create_dir_if_not_exist(Path(self.outfile_fqn).parent)
         if self.compare:
             # Metadata comparison
             log.debug("Preparing metadata comparison")
@@ -180,6 +198,40 @@ class ProfileTask(BaseTask):
                 sheet="Metadata Comparison",
                 num_ds=len(ds_name_compressed_list),
                 skip_columns="column_name",
+            )
+
+            # Constraint comparison
+            log.debug("Preparing table constraint comparison")
+            df_tab_constr_merge = perform_comparison(
+                ds_compressed_names=ds_name_compressed_list,
+                dataframes=table_constraint_frames,
+                on="table_constraint",
+                how="outer",
+                case_insensitive=True,
+            )
+            log.debug(
+                "Calculated table constraint comparison for"
+                f"{df_tab_constr_merge.shape[0]} columns"
+            )
+
+            log.debug(f"Writing results into file: {self.outfile_fqn}")
+            primary_key_col = df_tab_constr_merge.pop("table_constraint")
+            df_tab_constr_merge.insert(
+                loc=0, column="table_constraint", value=primary_key_col
+            )
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                df_tab_constr_merge.to_excel(
+                    writer, sheet_name="Table Constraint Comparison", index=False
+                )
+
+            log.debug("Highlighting mismtach cells")
+            highlight_mismatch_cells(
+                excel_file=self.outfile_fqn,
+                sheet="Table Constraint Comparison",
+                num_ds=len(ds_name_compressed_list),
+                skip_columns="table_constraint",
             )
 
             # Metric comparison
@@ -221,6 +273,18 @@ class ProfileTask(BaseTask):
                     primary_key_col = df.pop("column_name")
                     df.insert(loc=0, column="column_name", value=primary_key_col)
                     df.to_excel(writer, sheet_name=f"{ds_name} Metadata", index=False)
+
+            # Table constraint output
+            log.debug(f"Writing table constraints into file: {self.outfile_fqn}")
+            with pd.ExcelWriter(
+                self.outfile_fqn, mode="a" if os.path.exists(self.outfile_fqn) else "w"
+            ) as writer:
+                for ds_name, df in zip(ds_name_compressed_list, table_constraint_frames):
+                    primary_key_col = df.pop("table_constraint")
+                    df.insert(loc=0, column="table_constraint", value=primary_key_col)
+                    df.to_excel(
+                        writer, sheet_name=f"{ds_name} Tab Constraint", index=False
+                    )
 
             # Metric output
             log.debug(f"Writing metric into file: {self.outfile_fqn}")
