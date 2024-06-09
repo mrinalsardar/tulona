@@ -52,6 +52,6 @@ def get_task_outfile(task_conf: Dict) -> str:
             else:
                 extra_params.append(p.replace("_", ""))
 
-    param_str = "_".join(extra_params) if len(extra_params) > 0 else "default"
+    param_str = ("_".join(extra_params) if len(extra_params) > 0 else "default").lower()
     filename = f"{task}__{param_str}.xlsx"
     return filename
