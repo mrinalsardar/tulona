@@ -5,7 +5,7 @@ from tulona.exceptions import TulonaNotImplementedError
 from tulona.util.sql import (
     build_filter_query_expression,
     get_column_query,
-    get_metadata_query,
+    get_information_schema_query,
     get_metric_query,
     get_sample_row_query,
     get_table_data_query,
@@ -122,33 +122,40 @@ def test_build_filter_query_expression(df, primary_key, expected):
 
 
 @pytest.mark.parametrize(
-    "database,schema,table,expected",
+    "database,schema,table,info_view,expected",
     [
         (
             "database",
             "schema",
             "table",
+            "columns",
             """
-        select * from database.information_schema.columns
-        where upper(table_catalog) = 'DATABASE'
-        and upper(table_schema) = 'SCHEMA'
-        and upper(table_name) = 'TABLE'
+        select
+            *
+        from database.information_schema.columns
+        where
+            upper(table_schema) = 'SCHEMA'
+            and upper(table_name) = 'TABLE'
         """,
         ),
         (
             None,
             "schema",
             "table",
+            "columns",
             """
-        select * from information_schema.columns
-        where upper(table_schema) = 'SCHEMA'
-        and upper(table_name) = 'TABLE'
+        select
+            *
+        from information_schema.columns
+        where
+            upper(table_schema) = 'SCHEMA'
+            and upper(table_name) = 'TABLE'
         """,
         ),
     ],
 )
-def test_get_metadata_query(database, schema, table, expected):
-    query = get_metadata_query(database, schema, table)
+def test_get_metadata_query(database, schema, table, info_view, expected):
+    query = get_information_schema_query(database, schema, table, info_view)
     assert query == expected
 
 

@@ -75,13 +75,13 @@ def get_information_schema_query(
     database: Union[str, None], schema: str, table: str, info_view: str
 ) -> str:
     query = f"""
-    select
-        *
-    from {database + '.' if database else ''}information_schema.{info_view}
-    where
-        upper(table_schema) = '{schema.upper()}'
-        and upper(table_name) = '{table.upper()}'
-    """
+        select
+            *
+        from {database + '.' if database else ''}information_schema.{info_view}
+        where
+            upper(table_schema) = '{schema.upper()}'
+            and upper(table_name) = '{table.upper()}'
+        """
     return query
 
 
