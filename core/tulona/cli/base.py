@@ -13,7 +13,7 @@ from tulona.task.compare import CompareColumnTask, CompareRowTask, CompareTask
 from tulona.task.ping import PingTask
 from tulona.task.profile import ProfileTask
 from tulona.task.scan import ScanTask
-from tulona.util.filesystem import get_run_result_dir, get_task_outdir
+from tulona.util.filesystem import get_runid, get_task_outdir, get_task_outfile
 
 log = logging.getLogger()
 log_formatter = logging.Formatter(
@@ -53,9 +53,7 @@ def cli(ctx):
     ctx.obj = ctx.obj or {}
     ctx.obj["project"] = proj.load_project_config()
     ctx.obj["profile"] = prof.load_profile_config()[ctx.obj["project"]["name"]]
-    ctx.obj["project"]["run_result_dir"] = get_run_result_dir(
-        basedir=ctx.obj["project"]["outdir"]
-    )
+    ctx.obj["project"]["runid"] = get_runid()
 
 
 # command: tulona ping
@@ -131,8 +129,9 @@ def scan(ctx, **kwargs):
     for tconf in scan_tasks:
         nlog.info(f"Executing scan with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
@@ -182,10 +181,12 @@ def profile(ctx, **kwargs):
     for tconf in profile_tasks:
         nlog.info(f"Executing profile with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         ProfileTask(
@@ -232,10 +233,12 @@ def compare_row(ctx, **kwargs):
     for tconf in compare_row_tasks:
         nlog.info(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareRowTask(
@@ -290,10 +293,12 @@ def compare_column(ctx, **kwargs):
     for tconf in compare_column_tasks:
         nlog.info(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareColumnTask(
@@ -348,10 +353,12 @@ def compare(ctx, **kwargs):
     for tconf in compare_tasks:
         nlog.info(f"Executing compare with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "comparison.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareTask(
@@ -407,10 +414,12 @@ def run(ctx, **kwargs):
     for tconf in profile_tasks:
         nlog.info(f"Executing profile with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "profile_metadata.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         try:
@@ -428,10 +437,12 @@ def run(ctx, **kwargs):
     for tconf in compare_row_tasks:
         nlog.info(f"Executing compare-row with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "row_comparison.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         try:
@@ -452,10 +463,12 @@ def run(ctx, **kwargs):
     for tconf in compare_column_tasks:
         nlog.info(f"Executing compare-column with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "column_comparison.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         try:
@@ -476,10 +489,12 @@ def run(ctx, **kwargs):
     for tconf in compare_tasks:
         nlog.info(f"Executing compare with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
-        outfile_fqn = Path(final_outdir, "comparison.xlsx")
+        outfilename = get_task_outfile(task_conf=tconf)
+        outfile_fqn = Path(final_outdir, outfilename)
         nlog.debug(f"Output will be stored in: {final_outdir}")
 
         CompareTask(
@@ -498,8 +513,9 @@ def run(ctx, **kwargs):
     for tconf in scan_tasks:
         nlog.info(f"Executing scan with task profile: {tconf}")
         final_outdir = get_task_outdir(
-            run_dir=ctx.obj["project"]["run_result_dir"],
-            task_conf=tconf,
+            base_dir=ctx.obj["project"]["outdir"],
+            runid=ctx.obj["project"]["runid"],
+            ds_list=tconf["datasources"],
         )
         nlog.debug(f"Output will be stored in: {final_outdir}")
 

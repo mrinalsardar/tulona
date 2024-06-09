@@ -31,16 +31,19 @@ def create_dir_if_not_exist(d: Union[str, Path]) -> Path:
     return p
 
 
-def get_run_result_dir(basedir: str):
+def get_runid():
     out_timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-    run_dir = Path(basedir, f"runid__{out_timestamp}")
-    return run_dir
+    runid = f"runid__{out_timestamp}"
+    return runid
 
 
-# TODO: Testable - pull current timestamp from caller
-def get_task_outdir(run_dir: str, task_conf: Dict):
-    task = task_conf["task"].replace("-", "")
-    ds_list = [ds.split(":")[0].replace("_", "") for ds in task_conf["datasources"]]
+def get_task_outdir(base_dir: str, runid: str, ds_list: list) -> Path:
+    final_outdir = Path(base_dir, "_".join(ds_list), runid)
+    return final_outdir
+
+
+def get_task_outfile(task_conf: Dict) -> str:
+    task = task_conf["task"].replace("-", "_")
     extra_params = []
     for p in task_conf:
         if p not in ["task", "datasources"]:
@@ -49,6 +52,6 @@ def get_task_outdir(run_dir: str, task_conf: Dict):
             else:
                 extra_params.append(p.replace("_", ""))
 
-    innerdir = f"{'_'.join(ds_list)}_{task}{'_' + '_'.join(extra_params) if len(extra_params) > 0 else ''}".lower()
-    final_outdir = Path(run_dir, innerdir)
-    return final_outdir
+    param_str = ("_".join(extra_params) if len(extra_params) > 0 else "default").lower()
+    filename = f"{task}__{param_str}.xlsx"
+    return filename

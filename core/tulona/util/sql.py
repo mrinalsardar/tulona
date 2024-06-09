@@ -71,19 +71,16 @@ def build_filter_query_expression(
     return final_expr
 
 
-def get_metadata_query(database, schema, table):
-    if database:
-        query = f"""
-        select * from {database}.information_schema.columns
-        where upper(table_catalog) = '{database.upper()}'
-        and upper(table_schema) = '{schema.upper()}'
-        and upper(table_name) = '{table.upper()}'
-        """
-    else:
-        query = f"""
-        select * from information_schema.columns
-        where upper(table_schema) = '{schema.upper()}'
-        and upper(table_name) = '{table.upper()}'
+def get_information_schema_query(
+    database: Union[str, None], schema: str, table: str, info_view: str
+) -> str:
+    query = f"""
+        select
+            *
+        from {database + '.' if database else ''}information_schema.{info_view}
+        where
+            upper(table_schema) = '{schema.upper()}'
+            and upper(table_name) = '{table.upper()}'
         """
     return query
 
