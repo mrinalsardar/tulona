@@ -599,8 +599,8 @@ class CompareTask(BaseTask):
 
         # Column comparison
         project_copy = deepcopy(self.project)
-        for ds in project_copy["datasources"]:
-            if "compare_column" not in ds and primary_key:
+        for ds in self.datasources:
+            if "compare_column" not in project_copy["datasources"][ds] and primary_key:
                 project_copy["datasources"][ds]["compare_column"] = primary_key
         try:
             CompareColumnTask(
