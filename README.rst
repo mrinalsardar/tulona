@@ -372,19 +372,24 @@ Supported Data Platforms
 ------------------------
 
 .. list-table::
-   :widths: 50 200
+   :widths: 20 20 200
    :header-rows: 1
 
    * - Platform
      - Adapter Name
+     - Supported Auth Mechanism
    * - Postgres
      - postgres
+     - Connection string, Password
    * - MySQL
      - mysql
+     - Connection string, Password
    * - Snowflake
      - snowflake
+     - Password, Key pair, SSO (Externalbrowser)
    * - Microsoft SQL Server
      - mssql
+     - Connection string
 
 
 Development Environment Setup

@@ -9,57 +9,82 @@ from sqlalchemy import create_engine
 logging.getLogger("snowflake").setLevel(logging.ERROR)
 
 
-def get_snowflake_engine(conn_profile: Dict):
+class SnowflakeConnection:
+    _instance = None
 
-    if "password" in conn_profile:
-        engine = create_engine(
-            URL(
-                account=conn_profile["account"],
-                warehouse=conn_profile["warehouse"],
-                role=conn_profile["role"] if "role" in conn_profile else None,
-                database=conn_profile["database"],
-                schema=conn_profile["schema"],
-                user=conn_profile["user"],
-                password=conn_profile["password"],
-            ),
-            echo=False,
-        )  # TODO: remove echo_pool="debug" param
+    def __new__(cls, credentials: Dict):
+        if cls._instance is None:
+            cls._instance = super(SnowflakeConnection, cls).__new__(cls)
+            cls._instance._init_connection(credentials)
+        return cls._instance
 
-    if "private_key" in conn_profile:
+    def _init_connection(self, credentials: Dict):
+        if "password" in credentials:
+            self.engine = create_engine(
+                URL(
+                    account=credentials["account"],
+                    warehouse=credentials["warehouse"],
+                    role=credentials["role"] if "role" in credentials else None,
+                    database=credentials["database"],
+                    schema=credentials["schema"],
+                    user=credentials["user"],
+                    password=credentials["password"],
+                ),
+                echo=False,
+            )  # TODO: remove echo_pool="debug" param
 
-        # validate private_key
-        if not conn_profile["private_key"].endswith(".p8"):
-            raise ValueError(f"{conn_profile['private_key']} is not a valid private key")
+        if "private_key" in credentials:
+            # validate private_key
+            if not credentials["private_key"].endswith(".p8"):
+                raise ValueError(
+                    f"{credentials['private_key']} is not a valid private key"
+                )
 
-        password = (
-            conn_profile["private_key_passphrase"].encode()
-            if "private_key_passphrase" in conn_profile
-            else None
-        )
-
-        with open(conn_profile["private_key"], "rb") as key:
-            p_key = serialization.load_pem_private_key(
-                key.read(), password=password, backend=default_backend()
+            password = (
+                credentials["private_key_passphrase"].encode()
+                if "private_key_passphrase" in credentials
+                else None
             )
 
-        pkb = p_key.private_bytes(
-            encoding=serialization.Encoding.DER,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        )
+            with open(credentials["private_key"], "rb") as key:
+                p_key = serialization.load_pem_private_key(
+                    key.read(), password=password, backend=default_backend()
+                )
 
-        engine = create_engine(
-            URL(
-                account=conn_profile["account"],
-                warehouse=conn_profile["warehouse"],
-                database=conn_profile["database"],
-                schema=conn_profile["schema"],
-                user=conn_profile["user"],
-            ),
-            connect_args={
-                "private_key": pkb,
-            },
-            echo=False,
-        )  # TODO: remove echo_pool="debug" param
+            pkb = p_key.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
 
-    return engine
+            self.engine = create_engine(
+                URL(
+                    account=credentials["account"],
+                    warehouse=credentials["warehouse"],
+                    database=credentials["database"],
+                    schema=credentials["schema"],
+                    user=credentials["user"],
+                ),
+                connect_args={
+                    "private_key": pkb,
+                },
+                echo=False,
+            )  # TODO: remove echo_pool="debug" param
+
+        if "authenticator" in credentials:
+            if credentials["authenticator"] == "externalbrowser":
+                self.engine = create_engine(
+                    URL(
+                        account=credentials["account"],
+                        warehouse=credentials["warehouse"],
+                        role=credentials["role"] if "role" in credentials else None,
+                        database=credentials["database"],
+                        schema=credentials["schema"],
+                        user=credentials["user"],
+                        authenticator=credentials["authenticator"],
+                    ),
+                    echo=False,
+                )  # TODO: remove echo_pool="debug" param
+
+    def get_engine(self):
+        return self.engine
