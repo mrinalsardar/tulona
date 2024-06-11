@@ -188,8 +188,8 @@ class CompareRowTask(BaseTask):
         conman1, conman2 = econf_dict["connection_managers"]
 
         if len(econf_dict["queries"]) > 0:
-            data_container1 = "(" + econf_dict["queries"][0] + ") t"
-            data_container2 = "(" + econf_dict["queries"][1] + ") t"
+            data_container1 = "(" + econf_dict["queries"][0] + ") as tulona__"
+            data_container2 = "(" + econf_dict["queries"][1] + ") as tulona__"
         else:
             table_fqn1, table_fqn2 = econf_dict["table_fqns"]
             data_container1 = table_fqn1
