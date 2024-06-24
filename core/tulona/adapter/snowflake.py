@@ -30,8 +30,13 @@ class SnowflakeConnection:
                     user=credentials["user"],
                     password=credentials["password"],
                 ),
+                connect_args={
+                    "CLIENT_SESSION_KEEP_ALIVE": credentials.get(
+                        "client_session_keep_alive", False
+                    )
+                },
                 echo=False,
-            )  # TODO: remove echo_pool="debug" param
+            )
 
         if "private_key" in credentials:
             # validate private_key
@@ -67,9 +72,12 @@ class SnowflakeConnection:
                 ),
                 connect_args={
                     "private_key": pkb,
+                    "CLIENT_SESSION_KEEP_ALIVE": credentials.get(
+                        "client_session_keep_alive", False
+                    ),
                 },
                 echo=False,
-            )  # TODO: remove echo_pool="debug" param
+            )
 
         if "authenticator" in credentials:
             if credentials["authenticator"] == "externalbrowser":
@@ -83,8 +91,13 @@ class SnowflakeConnection:
                         user=credentials["user"],
                         authenticator=credentials["authenticator"],
                     ),
+                    connect_args={
+                        "CLIENT_SESSION_KEEP_ALIVE": credentials.get(
+                            "client_session_keep_alive", False
+                        )
+                    },
                     echo=False,
-                )  # TODO: remove echo_pool="debug" param
+                )
 
     def get_engine(self):
         return self.engine
