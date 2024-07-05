@@ -176,6 +176,7 @@ class ProfileTask(BaseTask):
                 ds_compressed_names=ds_name_compressed_list,
                 dataframes=meta_frames,
                 on="column_name",
+                how="outer",
                 case_insensitive=True,
             )
             log.debug(
@@ -239,6 +240,7 @@ class ProfileTask(BaseTask):
             df_metric_merge = perform_comparison(
                 ds_compressed_names=ds_name_compressed_list,
                 dataframes=metric_frames,
+                how="outer",
                 on="column_name",
                 case_insensitive=True,
             )
