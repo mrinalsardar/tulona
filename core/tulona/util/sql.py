@@ -16,6 +16,8 @@ def get_sample_row_query(dbtype: str, data_container: str, sample_count: int):
     # TODO: validate sampling mechanism for maximum possible randomness
     if dbtype == "snowflake":
         query = f"select * from {data_container} tablesample ({sample_count} rows)"
+    elif dbtype == "bigquery":
+        query = f"select * from {data_container} limit {sample_count}"
     elif dbtype == "mssql":
         query = f"select top {sample_count} * from {data_container}"
     elif dbtype == "postgres":
@@ -72,16 +74,35 @@ def build_filter_query_expression(
 
 
 def get_information_schema_query(
-    database: Union[str, None], schema: str, table: str, info_view: str
+    database: Union[str, None], schema: str, table: str, info_view: str, dbtype: str
 ) -> str:
-    query = f"""
-        select
-            *
-        from {database + '.' if database else ''}information_schema.{info_view}
-        where
-            upper(table_schema) = '{schema.upper()}'
-            and upper(table_name) = '{table.upper()}'
-        """
+    if dbtype == "mysql":
+        query = f"""
+            select
+                *
+            from information_schema.{info_view}
+            where
+                upper(table_schema) = '{schema.upper()}'
+                and upper(table_name) = '{table.upper()}'
+            """
+    elif dbtype == "bigquery":
+        query = f"""
+            select
+                *
+            from {schema}.INFORMATION_SCHEMA.{info_view.upper()}
+            where
+                upper(table_schema) = '{schema.upper()}'
+                and upper(table_name) = '{table.upper()}'
+            """
+    else:
+        query = f"""
+            select
+                *
+            from {database}.information_schema.{info_view}
+            where
+                upper(table_schema) = '{schema.upper()}'
+                and upper(table_name) = '{table.upper()}'
+            """
     return query
 
 

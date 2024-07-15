@@ -122,20 +122,36 @@ def test_build_filter_query_expression(df, primary_key, expected):
 
 
 @pytest.mark.parametrize(
-    "database,schema,table,info_view,expected",
+    "database,schema,table,info_view,dbtype,expected",
     [
         (
             "database",
             "schema",
             "table",
             "columns",
+            "postgres",
             """
-        select
-            *
-        from database.information_schema.columns
-        where
-            upper(table_schema) = 'SCHEMA'
-            and upper(table_name) = 'TABLE'
+            select
+                *
+            from database.information_schema.columns
+            where
+                upper(table_schema) = 'SCHEMA'
+                and upper(table_name) = 'TABLE'
+        """,
+        ),
+        (
+            "project",
+            "dataset",
+            "table",
+            "columns",
+            "bigquery",
+            """
+            select
+                *
+            from dataset.INFORMATION_SCHEMA.COLUMNS
+            where
+                upper(table_schema) = 'DATASET'
+                and upper(table_name) = 'TABLE'
         """,
         ),
         (
@@ -143,20 +159,23 @@ def test_build_filter_query_expression(df, primary_key, expected):
             "schema",
             "table",
             "columns",
+            "mysql",
             """
-        select
-            *
-        from information_schema.columns
-        where
-            upper(table_schema) = 'SCHEMA'
-            and upper(table_name) = 'TABLE'
+            select
+                *
+            from information_schema.columns
+            where
+                upper(table_schema) = 'SCHEMA'
+                and upper(table_name) = 'TABLE'
         """,
         ),
     ],
 )
-def test_get_metadata_query(database, schema, table, info_view, expected):
-    query = get_information_schema_query(database, schema, table, info_view)
-    assert query == expected
+def test_get_metadata_query(database, schema, table, info_view, dbtype, expected):
+    query = get_information_schema_query(database, schema, table, info_view, dbtype)
+    assert query.replace("\n", "").replace(" ", "") == expected.replace("\n", "").replace(
+        " ", ""
+    )
 
 
 @pytest.mark.parametrize(

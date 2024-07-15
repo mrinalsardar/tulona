@@ -55,6 +55,7 @@ class ProfileTask(BaseTask):
         metric_frames = []
         ds_name_compressed_list = []
         for ds_name in self.datasources:
+            log.info(f"Profiling {ds_name}")
             log.debug(f"Extracting configs for: {ds_name}")
             ds_name_compressed = ds_name.replace("_", "")
             ds_name_compressed_list.append(ds_name_compressed)
@@ -65,26 +66,43 @@ class ProfileTask(BaseTask):
                 extract_profile_name(self.project, ds_name)
             ]["type"]
 
-            if "schema" not in ds_config or "table" not in ds_config:
+            mandatory_properties = ["table"]
+            mandatory_properties += ["dataset"] if dbtype == "bigquery" else ["schema"]
+
+            missing_properties = []
+            for prop in mandatory_properties:
+                if prop not in ds_config:
+                    missing_properties.append(prop)
+
+            if len(missing_properties) > 0:
                 raise TulonaMissingPropertyError(
-                    "Profiling requires `schema` and `table`"
+                    f"Profiling requires {missing_properties}"
                 )
 
             # MySQL doesn't have logical database
-            database = None
             if "database" in ds_config and dbtype.lower() != "mysql":
                 database = ds_config["database"]
-            schema = ds_config["schema"]
+            elif dbtype.lower() == "bigquery":
+                database = ds_config["project"]
+            else:
+                database = None
+
+            if dbtype.lower() == "bigquery":
+                schema = ds_config["dataset"]
+            else:
+                schema = ds_config["schema"]
+
             table = ds_config["table"]
 
             log.debug(f"Acquiring connection to the database of: {ds_name}")
             connection_profile = get_connection_profile(self.profile, ds_config)
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
-            log.info(f"Profiling {ds_name}")
             # Extract metadata
             log.debug("Extracting metadata")
-            meta_query = get_information_schema_query(database, schema, table, "columns")
+            meta_query = get_information_schema_query(
+                database, schema, table, "columns", dbtype
+            )
             log.debug(f"Executing query: {meta_query}")
             df_meta = get_query_output_as_df(
                 connection_manager=conman, query_text=meta_query
@@ -95,7 +113,7 @@ class ProfileTask(BaseTask):
             # Extract table constraints
             log.debug("Extracting table constraint info")
             table_constraint_query = get_information_schema_query(
-                database, schema, table, "table_constraints"
+                database, schema, table, "table_constraints", dbtype
             )
             log.debug(f"Executing query: {table_constraint_query}")
             df_tab_constraint = get_query_output_as_df(

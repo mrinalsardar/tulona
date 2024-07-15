@@ -33,9 +33,7 @@ class PingTask(BaseTask):
             try:
                 conman = self.get_connection_manager(conn_profile=connection_profile)
                 with conman.engine.connect() as connection:
-                    results = connection.execute(
-                        "select * from information_schema.tables"
-                    ).fetchone()
+                    results = connection.execute("select 1").fetchone()
                     _ = results[0]
                     log.info("Connection successful")
             except Exception:

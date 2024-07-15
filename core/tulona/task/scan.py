@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Union
 
-from tulona.exceptions import TulonaMissingPropertyError, TulonaUnSupportedTaskError
+from tulona.exceptions import TulonaUnSupportedTaskError
 from tulona.task.base import BaseTask
 from tulona.task.compare import CompareTask
 from tulona.task.helper import perform_comparison
@@ -79,26 +79,34 @@ class ScanTask(BaseTask):
             conman = self.get_connection_manager(conn_profile=connection_profile)
 
             # MySQL doesn't have logical database
-            if "database" in ds_config:
+            if "database" in ds_config and dbtype.lower() != "mysql":
                 database = ds_config["database"]
-            elif dbtype.lower() == "mysql":
-                database = "def"
+            elif dbtype.lower() == "bigquery":
+                database = ds_config["project"]
             else:
-                raise TulonaMissingPropertyError(
-                    "Datasource config is missing 'database'."
-                )
+                database = None
+
+            if dbtype.lower() == "bigquery":
+                if "dataset" in ds_config:
+                    ds_config["schema"] = ds_config["dataset"]
 
             # Create output directory
             _ = create_dir_if_not_exist(self.final_outdir)
 
             # Database scan
             log.debug(f"Performing database scan for: {database}")
+            schemata_source = f"{database}.information_schema.schemata"
+            if dbtype == "bigquery":
+                schemata_source = "INFORMATION_SCHEMA.SCHEMATA"
+            if dbtype == "mysql":
+                schemata_source = "information_schema.schemata"
+
             if "schema" in ds_config:
                 schemata_query = f"""
                 select
                     *
                 from
-                    {"" if dbtype == "mysql" else database + "."}information_schema.schemata
+                    {schemata_source}
                 where
                     upper(catalog_name) = '{database.upper()}'
                     and upper(schema_name) = '{ds_config["schema"].upper()}'
@@ -108,7 +116,7 @@ class ScanTask(BaseTask):
                 select
                     *
                 from
-                    {"" if dbtype == "mysql" else database + "."}information_schema.schemata
+                    {schemata_source}
                 where
                     upper(catalog_name) = '{database.upper()}'
                     and upper(schema_name) not in (

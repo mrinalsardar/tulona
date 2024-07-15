@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from tulona.adapter.base.connection import BaseConnectionManager
+from tulona.adapter.bigquery import BigQueryConnection
 from tulona.adapter.mssql import get_mssql_engine
 from tulona.adapter.mysql import get_mysql_engine
 from tulona.adapter.postgres import get_postgres_engine
@@ -17,6 +18,8 @@ class ConnectionManager(BaseConnectionManager):
         dbtype = self.conn_profile["type"].lower()
         if dbtype == "snowflake":
             self.engine = SnowflakeConnection(credentials=self.conn_profile).get_engine()
+        elif dbtype == "bigquery":
+            self.engine = BigQueryConnection(credentials=self.conn_profile).get_engine()
         elif dbtype == "mssql":
             self.engine = get_mssql_engine(self.conn_profile)
         elif dbtype == "postgres":
