@@ -57,6 +57,11 @@ This is what a sample `profiles.yml` looks like:
       mssql:
         type: mssql
         connection_string: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=dagger;DATABASE=test;UID=user;PWD=password'
+      bigquery:
+        type: bigquery
+        method: service_account
+        project: training-338516
+        key_file: "/path/to/service_account/training-338516-362fa3727bae.json"
 
 
 Project Config File
@@ -169,6 +174,22 @@ This is how a `tulona-project.yml` file looks like:
       exclude_columns:
         - phone_number
       compare_column: Employee_ID
+    cust_bq:
+      connection_profile: bigquery
+      project: training-338516
+      dataset: dummy_fashion_retail
+      table: customers
+      primary_key: customer_id
+      compare_column:
+        - customer_id
+    cust_snow:
+      connection_profile: snowflake
+      database: training
+      schema: dummy_fashion_retail
+      table: customers
+      primary_key: customer_id
+      compare_column:
+        - customer_id
 
 
   # List of task configs(Dict)
@@ -263,6 +284,10 @@ This is how a `tulona-project.yml` file looks like:
       datasources:
         - employee_postgres_query_tab
         - employee_mysql_query_tab
+    - task: compare
+      datasources:
+        - cust_bq
+        - cust_snow
 
 
 Features
@@ -390,6 +415,9 @@ Supported Data Platforms
    * - Microsoft SQL Server
      - mssql
      - Connection string
+   * - BigQuery
+     - bigquery
+     - Service Account Json Key
 
 
 Development Environment Setup
