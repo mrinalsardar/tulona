@@ -121,9 +121,16 @@ class CompareRowTask(BaseTask):
                 # MySQL doesn't have logical database
                 if "database" in ds_config and dbtype.lower() != "mysql":
                     database = ds_config["database"]
+                elif dbtype.lower() == "bigquery":
+                    database = ds_config["project"]
                 else:
                     database = None
-                schema = ds_config["schema"]
+
+                if dbtype.lower() == "bigquery":
+                    schema = ds_config["dataset"]
+                else:
+                    schema = ds_config["schema"]
+
                 table = ds_config["table"]
 
                 table_fqn = get_table_fqn(database, schema, table)
@@ -425,9 +432,14 @@ class CompareColumnTask(BaseTask):
                 # MySQL doesn't have logical database
                 if "database" in ds_config and dbtype.lower() != "mysql":
                     database = ds_config["database"]
+                elif dbtype.lower() == "bigquery":
+                    database = ds_config["project"]
                 else:
                     database = None
-                if "schema" in ds_config:
+
+                if dbtype.lower() == "bigquery":
+                    schema = ds_config["dataset"]
+                else:
                     schema = ds_config["schema"]
 
                 table = ds_config["table"]

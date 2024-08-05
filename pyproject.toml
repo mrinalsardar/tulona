@@ -1,6 +1,6 @@
 [project]
 name = "tulona"
-version = "0.10.1"
+version = "0.11.0"
 description = "A tool to compare data from different sources."
 dependencies = [
   "click~=8.1",
@@ -14,6 +14,8 @@ dependencies = [
   "openpyxl~=3.1",
   "Jinja2~=3.1",
   "pydantic~=2.7",
+  "sqlalchemy-bigquery",
+  "google-cloud-bigquery-storage",
 ]
 requires-python = ">= 3.8"
 authors = [
@@ -129,7 +131,7 @@ line_length = 90
 skip = [".gitignore"]
 
 [tool.bumpversion]
-current_version = "0.10.1"
+current_version = "0.11.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
