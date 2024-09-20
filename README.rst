@@ -56,7 +56,7 @@ This is what a sample `profiles.yml` looks like:
         private_key_passphrase: 444444
       mssql:
         type: mssql
-        connection_string: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=dagger;DATABASE=test;UID=user;PWD=password'
+        connection_string: 'mssql+pymssql://<username>:<password>@<freetds_name>/?charset=utf8'
       bigquery:
         type: bigquery
         method: service_account
@@ -414,7 +414,7 @@ Supported Data Platforms
      - Password, Key pair, SSO (Externalbrowser)
    * - Microsoft SQL Server
      - mssql
-     - Connection string
+     - Connection string (sqlalchemy[`pymssql <https://docs.sqlalchemy.org/en/20/dialects/mssql.html#module-sqlalchemy.dialects.mssql.pymssql>`_ or `pyodbc <https://docs.sqlalchemy.org/en/20/dialects/mssql.html#module-sqlalchemy.dialects.mssql.pyodbc>`_])
    * - BigQuery
      - bigquery
      - Service Account Json Key

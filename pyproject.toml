@@ -8,9 +8,12 @@ dependencies = [
   "psycopg2-binary~=2.9",
   "pymysql~=1.1",
   "cryptography~=42.0",
-  "snowflake-sqlalchemy>=1.5.3",
+  "snowflake-sqlalchemy==1.5.3",
+  "snowflake-connector-python[secure-local-storage]==3.12.2",
   "pyodbc~=5.1",
+  "pymssql==2.3.1",
   "pandas~=1.5", # can't upgrade until https://github.com/pandas-dev/pandas/issues/57053 is resolved
+  "numpy==1.26.4",
   "openpyxl~=3.1",
   "Jinja2~=3.1",
   "pydantic~=2.7",

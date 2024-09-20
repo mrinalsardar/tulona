@@ -1,14 +1,15 @@
 from typing import Dict
 
 from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
+
+# from sqlalchemy.engine import URL
 
 
 def get_mssql_engine(conn_profile: Dict):
     if "connection_string" in conn_profile:
         connection_string = conn_profile["connection_string"]
-        url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
-        engine = create_engine(url)
+        # url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
+        engine = create_engine(connection_string)
 
     # validate properties
     if "connection_string" not in conn_profile:
