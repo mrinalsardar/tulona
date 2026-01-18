@@ -56,7 +56,7 @@ This is what a sample `profiles.yml` looks like:
         private_key_passphrase: 444444
       mssql:
         type: mssql
-        connection_string: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=dagger;DATABASE=test;UID=user;PWD=password'
+        connection_string: 'mssql+pymssql://<username>:<password>@<freetds_name>/?charset=utf8'
       bigquery:
         type: bigquery
         method: service_account
@@ -414,7 +414,7 @@ Supported Data Platforms
      - Password, Key pair, SSO (Externalbrowser)
    * - Microsoft SQL Server
      - mssql
-     - Connection string
+     - Connection string (sqlalchemy[`pymssql <https://docs.sqlalchemy.org/en/20/dialects/mssql.html#module-sqlalchemy.dialects.mssql.pymssql>`_ or `pyodbc <https://docs.sqlalchemy.org/en/20/dialects/mssql.html#module-sqlalchemy.dialects.mssql.pyodbc>`_])
    * - BigQuery
      - bigquery
      - Service Account Json Key
@@ -432,6 +432,18 @@ Build Wheel Executable
 Install Wheel Executable File
 -----------------------------
 * Execute `pip install <wheel-file.whl>`
+
+Create A Pull Request
+---------------------
+To create a PR, follow the below steps:
+
+* Bump the version: `bump-my-version bump major/minor/patch`
+* Commit bumped changes (current version -> bumped version): `git commit -am "Bumped from vx.x.x -> vx.x.x"`
+* Push bumped changes: `git push`
+* Tag it (bumped version): `git tag -a vx.x.x -m "vx.x.x"`
+* Push the tag (deploys to `TestPyPI <https://test.pypi.org/project/tulona/>`_): `git push origin vx.x.x`
+* Install in from TestPyPI and test (optional)
+* Create a PR from your branch into `main` in `github <https://github.com/mrinalsardar/tulona/pulls>`_
 
 
 .. |profile| image:: images/profile.png
