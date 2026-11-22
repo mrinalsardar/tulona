@@ -1,0 +1,13 @@
+name: tulona-3.14
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pytest~=8.1
+  - flake8
+  - coverage
+  - black
+  - isort
+  - pytest-cov
+  - faker
+  - python=3.14.*
