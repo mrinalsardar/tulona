@@ -46,7 +46,7 @@ class SnowflakeConnection:
                 )
 
             password = (
-                credentials["private_key_passphrase"].encode()
+                str(credentials["private_key_passphrase"]).encode()
                 if "private_key_passphrase" in credentials
                 else None
             )

@@ -103,6 +103,17 @@ def test_private_key_with_passphrase(mocks, tmp_path):
     assert connect_args["CLIENT_SESSION_KEEP_ALIVE"] is True
 
 
+@pytest.mark.parametrize("passphrase", [123456, "123456"])
+def test_private_key_passphrase_converted_to_str(mocks, tmp_path, passphrase):
+    create_engine, _ = mocks
+    key_path = write_key(tmp_path / "key.p8", passphrase=b"123456")
+    SnowflakeConnection(
+        {**BASE, "private_key": key_path, "private_key_passphrase": passphrase}
+    )
+    connect_args = create_engine.call_args.kwargs["connect_args"]
+    assert isinstance(connect_args["private_key"], bytes)
+
+
 def test_private_key_invalid_extension(mocks):
     with pytest.raises(ValueError, match="is not a valid private key"):
         SnowflakeConnection({**BASE, "private_key": "key.pem"})
