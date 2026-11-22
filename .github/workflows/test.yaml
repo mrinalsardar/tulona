@@ -23,6 +23,9 @@ jobs:
               python-version: "3.12"
             - os: "macos-latest"
               python-version: "3.12"
+            # no pymssql wheel exists for macOS arm64 + Python 3.8 (source build needs FreeTDS)
+            - os: "macos-latest"
+              python-version: "3.8"
 
     env:
       PYTHON_VERSION: ${{ matrix.python-version }}
