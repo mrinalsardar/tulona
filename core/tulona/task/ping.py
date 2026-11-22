@@ -4,6 +4,8 @@ import traceback
 from dataclasses import dataclass
 from typing import Dict, List
 
+from sqlalchemy import text
+
 from tulona.task.base import BaseTask
 from tulona.util.profiles import get_connection_profile
 
@@ -33,7 +35,7 @@ class PingTask(BaseTask):
             try:
                 conman = self.get_connection_manager(conn_profile=connection_profile)
                 with conman.engine.connect() as connection:
-                    results = connection.execute("select 1").fetchone()
+                    results = connection.execute(text("select 1")).fetchone()
                     _ = results[0]
                     log.info("Connection successful")
             except Exception:
