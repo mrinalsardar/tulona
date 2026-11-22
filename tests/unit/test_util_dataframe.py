@@ -73,3 +73,23 @@ def test_get_sample_rows_for_each_value(df, n_per_value, column_name, expected):
     grouped = df.groupby(column_name).size().reset_index(name="row_count")
     actual = grouped.to_dict("split")["data"]
     assert actual == expected
+
+
+def test_apply_column_exclusion_ignores_missing_columns(caplog):
+    df = pd.DataFrame({"A": [1, 2], "B": ["a", "b"], "C": [True, False]})
+    with caplog.at_level("WARNING"):
+        actual = apply_column_exclusion(df, "A", ["B", "Z"], "table")
+    assert_frame_equal(actual, pd.DataFrame({"A": [1, 2], "C": [True, False]}))
+    assert "['Z'] to be excluded are not present in table" in caplog.text
+
+
+def test_apply_column_exclusion_only_missing_columns_keeps_df(caplog):
+    df = pd.DataFrame({"A": [1, 2], "B": ["a", "b"]})
+    with caplog.at_level("WARNING"):
+        actual = apply_column_exclusion(df, "A", ["Z"], "table")
+    assert_frame_equal(actual, df)
+
+
+def test_apply_column_exclusion_empty_exclusion_keeps_df():
+    df = pd.DataFrame({"A": [1, 2], "B": ["a", "b"]})
+    assert_frame_equal(apply_column_exclusion(df, "A", [], "table"), df)
