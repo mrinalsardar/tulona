@@ -35,6 +35,12 @@ def test_get_table_fqn(database, schema, table, expected):
             "select * from database.schema.table tablesample (20 rows)",
         ),
         (
+            "bigquery",
+            "project.dataset.table",
+            20,
+            "select * from project.dataset.table limit 20",
+        ),
+        (
             "mssql",
             "database.schema.table",
             20,
